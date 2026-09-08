@@ -22,12 +22,103 @@ jobs:
             binutils-arm-none-eabi \
             libnewlib-arm-none-eabi
 
+      - name: Generate compiled music asset from typeA.raw
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import math
+          import re
+
+          raw_path = Path("assets/audio/typeA.raw")
+          c_path = Path("assets/typeA.c")
+          h_path = Path("assets/typeA.h")
+          audio_path = Path("audio.c")
+
+          if not raw_path.exists():
+              raise SystemExit("ERROR: assets/audio/typeA.raw was not found.")
+
+          data = raw_path.read_bytes()
+          byte_count = len(data)
+          sample_rate = 16834
+
+          # Timer1 overflows every 65536 samples. Timer2 counts those overflows.
+          loop_blocks = math.ceil(byte_count / 65536)
+
+          if loop_blocks < 1 or loop_blocks > 65535:
+              raise SystemExit(
+                  f"ERROR: Music requires {loop_blocks} timer blocks, outside the supported range."
+              )
+
+          print(f"Music bytes: {byte_count}")
+          print(f"Sample rate: {sample_rate} Hz")
+          print(f"Timer2 loop blocks: {loop_blocks}")
+          print(f"Approx duration: {byte_count / sample_rate:.2f} seconds")
+
+          # Generate assets/typeA.h.
+          h_path.write_text(
+              "#ifndef TYPE_A_H\n"
+              "#define TYPE_A_H\n\n"
+              f"#define typeA_bytes {byte_count}\n"
+              f"#define typeA_sampleRate {sample_rate}\n"
+              f"#define typeA_loopBlocks {loop_blocks}\n\n"
+              "extern const char typeA[];\n\n"
+              "#endif\n"
+          )
+
+          # Generate assets/typeA.c as a const byte string so it stays in ROM.
+          # 32 bytes per source line keeps compiler input manageable.
+          with c_path.open("w", newline="\n") as f:
+              f.write('#include "typeA.h"\n\n')
+              f.write("const char typeA[] =\n")
+              chunk_size = 32
+              for i in range(0, byte_count, chunk_size):
+                  chunk = data[i:i + chunk_size]
+                  escaped = "".join(f"\\x{b:02x}" for b in chunk)
+                  f.write(f'"{escaped}"\n')
+              f.write(";\n")
+
+          # Make audio.c use the generated loop count instead of the original hard-coded 42.
+          source = audio_path.read_text()
+          source, count = re.subn(
+              r"TIMER2_REGDATA\s*=\s*65536\s*-\s*(?:42|typeA_loopBlocks)\s*;",
+              "TIMER2_REGDATA = 65536 - typeA_loopBlocks;",
+              source
+          )
+
+          if count != 1:
+              raise SystemExit(
+                  "ERROR: Could not uniquely patch TIMER2_REGDATA in audio.c. "
+                  "The upstream audio code may have changed."
+              )
+
+          audio_path.write_text(source)
+
+          print("Generated assets/typeA.c")
+          print("Generated assets/typeA.h")
+          print("Updated audio.c to use typeA_loopBlocks")
+          PY
+
+      - name: Verify generated music files
+        run: |
+          grep "typeA_bytes" assets/typeA.h
+          grep "typeA_sampleRate" assets/typeA.h
+          grep "typeA_loopBlocks" assets/typeA.h
+          grep "TIMER2_REGDATA" audio.c
+          ls -lh assets/audio/typeA.raw assets/typeA.c assets/typeA.h
+
       - name: Build ROM
         run: make
+
+      - name: Verify ROM
+        run: |
+          test -f Sandtris.gba
+          ls -lh Sandtris.gba
+          sha256sum Sandtris.gba
 
       - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-gba
+          name: Sandtris-gba-custom-music
           path: Sandtris.gba
           if-no-files-found: error
