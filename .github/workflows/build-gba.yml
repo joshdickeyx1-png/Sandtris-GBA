@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.2.2
+name: Build Sandtris Miyoo Edition v0.2.3
 
 on:
   push:
@@ -75,7 +75,7 @@ jobs:
           print(f"Custom music: {byte_count} bytes, {loop_blocks} loop blocks")
           PY
 
-      - name: Apply Miyoo Edition v0.2.2 stability patch
+      - name: Apply Miyoo Edition v0.2.3 stability patch
         shell: bash
         run: |
           python3 - <<'PY'
@@ -167,13 +167,7 @@ jobs:
               "    }",
               "    saveData();",
               "}",
-              "",
-              "static void drawDitherPanel(int row, int col, int width, int height) {",
-              "    for (int y = 0; y < height; y++)",
-              "        for (int x = 0; x < width; x++)",
-              "            if (((x + y) & 1) == 0)",
-              "                setPixel(row + y, col + x, COL_BLACK);",
-              "}",
+
           ]
           game, n = re.subn(
               r"static int highscores\[4\];",
@@ -271,7 +265,7 @@ jobs:
               "    if (!titleBackgroundDrawn) {",
               "        drawFullScreenImageDMA(title);",
               "        titleBackgroundDrawn = 1;",
-              "        drawCenteredShadowString(54, 38, 164, 8, \"MIYOO EDITION v0.2.2\", COL_WHITE);",
+              "        drawCenteredShadowString(54, 38, 164, 8, \"MIYOO EDITION v0.2.3\", COL_WHITE);",
               "        drawCenteredShadowString(142, 38, 164, 8, \"UP/DOWN + A\", COL_WHITE);",
               "    }",
               "",
@@ -295,15 +289,14 @@ jobs:
               "static void drawScoresScreen(void) {",
               "    waitForVBlank();",
               "    drawFullScreenImageDMA(title);",
-              "    drawDitherPanel(22, 34, 172, 128);",
-              "    drawCenteredString(30, 34, 172, 8, \"MIYOO EDITION\", COL_WHITE);",
-              "    drawCenteredString(46, 34, 172, 8, \"HIGH SCORES\", COL_YELLOW);",
+              "    drawCenteredShadowString(30, 34, 172, 8, \"MIYOO EDITION\", COL_WHITE);",
+              "    drawCenteredShadowString(46, 34, 172, 8, \"HIGH SCORES\", COL_YELLOW);",
               "    char line[24];",
               "    for (int i = 0; i < 4; i++) {",
               "        snprintf(line, sizeof(line), \"%d. %d\", i + 1, highscores[i]);",
-              "        drawCenteredString(70 + i * 16, 34, 172, 8, line, COL_WHITE);",
+              "        drawCenteredShadowString(70 + i * 16, 34, 172, 8, line, i == 0 ? COL_YELLOW : COL_WHITE);",
               "    }",
-              "    drawCenteredString(140, 34, 172, 8, \"A/B/START - BACK\", COL_WHITE);",
+              "    drawCenteredShadowString(140, 34, 172, 8, \"A/B/START - BACK\", COL_WHITE);",
               "}",
               "",
           ]
@@ -475,15 +468,14 @@ jobs:
               "            recordHighScore(score);",
               "            gameOverHandled = 1;",
               "            waitForVBlank();",
-              "            drawDitherPanel(42, 42, 156, 84);",
-              "            drawCenteredString(50, 42, 156, 8, \"GAME OVER\", COL_WHITE);",
+              "            drawCenteredShadowString(50, 42, 156, 8, \"GAME OVER\", COL_YELLOW);",
               "            char finalLine[24];",
               "            snprintf(finalLine, sizeof(finalLine), \"SCORE: %d\", score);",
-              "            drawCenteredString(68, 42, 156, 8, finalLine, COL_YELLOW);",
+              "            drawCenteredShadowString(68, 42, 156, 8, finalLine, COL_WHITE);",
               "            snprintf(finalLine, sizeof(finalLine), \"BEST: %d\", highscores[0]);",
-              "            drawCenteredString(82, 42, 156, 8, finalLine, COL_WHITE);",
-              "            drawCenteredString(102, 42, 156, 8, \"A - PLAY AGAIN\", COL_WHITE);",
-              "            drawCenteredString(114, 42, 156, 8, \"B - MAIN MENU\", COL_WHITE);",
+              "            drawCenteredShadowString(82, 42, 156, 8, finalLine, COL_YELLOW);",
+              "            drawCenteredShadowString(102, 42, 156, 8, \"A - PLAY AGAIN\", COL_WHITE);",
+              "            drawCenteredShadowString(114, 42, 156, 8, \"B - MAIN MENU\", COL_WHITE);",
               "        }",
               "        if (key_hit(BUTTON_A)) {",
               "            state = START;",
@@ -500,20 +492,22 @@ jobs:
 
           game_path.write_text(game)
           header_path.write_text(header)
-          print("Applied Sandtris: Miyoo Edition v0.2.2 visual polish patch")
+          print("Applied Sandtris: Miyoo Edition v0.2.3 final polish patch")
           PY
 
       - name: Allow large embedded audio string
         run: |
           sed -i 's/-Werror=vla/-Werror=vla -Wno-error=overlength-strings/' Makefile
 
-      - name: Verify v0.2.2 patch
+      - name: Verify v0.2.3 patch
         run: |
-          grep -n "MIYOO EDITION v0.2.2" game.c
+          grep -n "MIYOO EDITION v0.2.3" game.c
           grep -n "SRAM_V113" game.c
           grep -n "restoreTitleStrip" game.c
           grep -n "drawShadowString" game.c
+          grep -n "drawCenteredShadowString" game.c
           grep -n "restoreGameplayScreen" game.c
+          ! grep -n "drawDitherPanel" game.c
           grep -n "updatePieceMiyoo" game.c
           grep -n "case PAUSE" game.c
           grep -n "case SCORES" game.c
@@ -527,13 +521,13 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.2.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.2.2.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.2.2.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.3.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.2.3.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.2.3.gba"
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-Edition-v0.2.2
-          path: "Sandtris - Miyoo Edition v0.2.2.gba"
+          name: Sandtris-Miyoo-Edition-v0.2.3
+          path: "Sandtris - Miyoo Edition v0.2.3.gba"
           if-no-files-found: error
