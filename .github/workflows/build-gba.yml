@@ -16,7 +16,11 @@ jobs:
       - name: Install ARM toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y make gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+          sudo apt-get install -y \
+            make \
+            gcc-arm-none-eabi \
+            binutils-arm-none-eabi \
+            libnewlib-arm-none-eabi
 
       - name: Generate custom music files
         shell: bash
@@ -24,39 +28,46 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import math, re
-          raw = Path('assets/audio/typeA.raw')
-          if not raw.exists():
-              raise SystemExit('ERROR: assets/audio/typeA.raw was not found.')
-          data = raw.read_bytes()
-          n = len(data)
-          rate = 16834
-          blocks = math.ceil(n / 65536)
 
-          Path('assets/typeA.h').write_text(
-              '#ifndef TYPE_A_H\n#define TYPE_A_H\n\n'
-              f'#define typeA_bytes {n}\n'
-              f'#define typeA_sampleRate {rate}\n'
-              f'#define typeA_loopBlocks {blocks}\n\n'
-              'extern const char typeA[];\n\n#endif\n'
+          raw_path = Path("assets/audio/typeA.raw")
+          if not raw_path.exists():
+              raise SystemExit("ERROR: assets/audio/typeA.raw was not found.")
+
+          data = raw_path.read_bytes()
+          byte_count = len(data)
+          sample_rate = 16834
+          loop_blocks = math.ceil(byte_count / 65536)
+
+          Path("assets/typeA.h").write_text(
+              "#ifndef TYPE_A_H\n"
+              "#define TYPE_A_H\n\n"
+              f"#define typeA_bytes {byte_count}\n"
+              f"#define typeA_sampleRate {sample_rate}\n"
+              f"#define typeA_loopBlocks {loop_blocks}\n\n"
+              "extern const char typeA[];\n\n"
+              "#endif\n"
           )
 
-          with Path('assets/typeA.c').open('w') as f:
-              f.write('#include "typeA.h"\n\nconst char typeA[] =\n')
-              for i in range(0, n, 32):
+          with Path("assets/typeA.c").open("w", newline="\n") as f:
+              f.write('#include "typeA.h"\n\n')
+              f.write("const char typeA[] =\n")
+              for i in range(0, byte_count, 32):
                   chunk = data[i:i+32]
-                  f.write('"' + ''.join(f'\\x{b:02x}' for b in chunk) + '"\n')
-              f.write(';\n')
+                  f.write('"' + ''.join(f"\\x{b:02x}" for b in chunk) + '"\n')
+              f.write(";\n")
 
-          p = Path('audio.c')
-          s = p.read_text()
+          audio = Path("audio.c")
+          s = audio.read_text()
           s, count = re.subn(
-              r'TIMER2_REGDATA\s*=\s*65536\s*-\s*(?:\d+|typeA_loopBlocks)\s*;',
-              'TIMER2_REGDATA = 65536 - typeA_loopBlocks;',
+              r"TIMER2_REGDATA\s*=\s*65536\s*-\s*(?:\d+|typeA_loopBlocks)\s*;",
+              "TIMER2_REGDATA = 65536 - typeA_loopBlocks;",
               s
           )
           if count != 1:
-              raise SystemExit('ERROR: Could not patch TIMER2_REGDATA.')
-          p.write_text(s)
+              raise SystemExit("ERROR: Could not patch TIMER2_REGDATA in audio.c.")
+          audio.write_text(s)
+
+          print(f"Custom music: {byte_count} bytes, {loop_blocks} timer blocks")
           PY
 
       - name: Apply Miyoo Edition v0.1 patch
@@ -64,72 +75,162 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          game = Path('game.c')
-          hdr = Path('game.h')
-          s = game.read_text()
-          h = hdr.read_text()
+          import re
 
-          if '    PAUSE,' not in h:
-              h = h.replace(
-                  '    CLEAR3,\n    GAMEOVER\n};',
-                  '    CLEAR3,\n    PAUSE,\n    GAMEOVER\n};'
+          game_path = Path("game.c")
+          header_path = Path("game.h")
+          s = game_path.read_text()
+          h = header_path.read_text()
+
+          # 1. Add PAUSE state immediately before GAMEOVER.
+          if "    PAUSE," not in h:
+              h, n = re.subn(
+                  r"(\s*CLEAR3,\s*\n)(\s*GAMEOVER)",
+                  r"\1    PAUSE,\n\2",
+                  h,
+                  count=1
               )
+              if n != 1:
+                  raise SystemExit("ERROR: Could not add PAUSE to game.h.")
 
-          if 'static int musicEnabled' not in s:
-              s = s.replace(
-                  'static int highscores[4];',
-                  'static int highscores[4];\nstatic int musicEnabled = 1;'
+          # 2. Add Miyoo settings/state variables.
+          if "static int musicEnabled" not in s:
+              s, n = re.subn(
+                  r"(static int highscores\[4\];)",
+                  r"\1\nstatic int musicEnabled = 1;\nstatic enum state pausedState = FALL;",
+                  s,
+                  count=1
               )
+              if n != 1:
+                  raise SystemExit("ERROR: Could not add Miyoo variables.")
 
-          old_audio = '    // play audio\n    reset_music();\n    init_audio();\n    loop_music();'
-          new_audio = '    // play audio\n    reset_music();\n    if (musicEnabled) {\n        init_audio();\n        loop_music();\n    }'
-          if old_audio in s:
-              s = s.replace(old_audio, new_audio)
+          # 3. Make music startup respect MUSIC ON/OFF.
+          if "if (musicEnabled)" not in s:
+              pattern = (
+                  r"(\s*// play audio\s*\n)"
+                  r"(\s*reset_music\(\);\s*\n)"
+                  r"\s*init_audio\(\);\s*\n"
+                  r"\s*loop_music\(\);"
+              )
+              repl = (
+                  r"\1"
+                  r"\2"
+                  "    if (musicEnabled) {\n"
+                  "        init_audio();\n"
+                  "        loop_music();\n"
+                  "    }"
+              )
+              s, n = re.subn(pattern, repl, s, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: Could not patch music startup.")
 
-          old_input = '    if (key_hit(BUTTON_SELECT))\n        restart();\n\n    if (key_hit(BUTTON_START))\n        state = START;'
-          new_input = '    if (key_hit(BUTTON_SELECT))\n        restart();\n\n    if (key_hit(BUTTON_START)) {\n        if (state == TITLE) {\n            state = START;\n        } else if (state == PAUSE) {\n            state = FALL;\n        } else if (state != START && state != GAMEOVER) {\n            state = PAUSE;\n        }\n    }'
-          if old_input not in s:
-              raise SystemExit('ERROR: Could not patch Start-button handling.')
-          s = s.replace(old_input, new_input)
+          # 4. Replace the original global START behavior with pause/resume.
+          if "pausedState = state;" not in s:
+              pattern = (
+                  r"\n\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
+                  r"\s*state = START;\s*\n"
+                  r"\s*\n"
+                  r"\s*switch \(state\)"
+              )
+              repl = """
+    if (key_hit(BUTTON_START)) {
+        if (state == TITLE) {
+            state = START;
+        } else if (state == PAUSE) {
+            state = pausedState;
+        } else if (state != START && state != GAMEOVER) {
+            pausedState = state;
+            state = PAUSE;
+        }
+    }
 
-          old_title = '    case TITLE:\n        if (key_hit(BUTTON_START))\n            state = START;\n\n        waitForVBlank();\n        drawFullScreenImageDMA(title);\n        break;'
-          new_title = '    case TITLE:\n        if (key_hit(BUTTON_A)) {\n            musicEnabled = !musicEnabled;\n        }\n\n        waitForVBlank();\n        drawFullScreenImageDMA(title);\n        drawString(116, 68, "MIYOO EDITION", COL_WHITE);\n        drawString(136, 52, "START  PLAY", COL_WHITE);\n        drawString(146, 52,\n                   musicEnabled ? "A      MUSIC ON" : "A      MUSIC OFF",\n                   COL_WHITE);\n        break;'
-          if old_title not in s:
-              raise SystemExit('ERROR: Could not patch TITLE state.')
-          s = s.replace(old_title, new_title)
+    switch (state)"""
+              s, n = re.subn(pattern, repl, s, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: Could not patch global START handling.")
 
-          if 'case PAUSE:' not in s:
-              marker = '    case GAMEOVER:'
-              pause_case = '    case PAUSE:\n        waitForVBlank();\n        drawRectDMA(66, 76, 88, 28, 0);\n        drawString(72, 96, "PAUSED", COL_WHITE);\n        drawString(84, 80, "START RESUME", COL_WHITE);\n        break;\n'
-              if marker not in s:
-                  raise SystemExit('ERROR: Could not locate GAMEOVER state.')
-              s = s.replace(marker, pause_case + marker)
+          # 5. Replace the exact TITLE case found in current upstream source.
+          if "MIYOO EDITION" not in s:
+              pattern = (
+                  r"    case TITLE:\s*\n"
+                  r"\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
+                  r"\s*state = START;\s*\n"
+                  r"\s*\n"
+                  r"\s*waitForVBlank\(\);\s*\n"
+                  r"\s*drawFullScreenImageDMA\(title\);\s*\n"
+                  r"\s*break;"
+              )
+              repl = """    case TITLE:
+        if (key_hit(BUTTON_A)) {
+            musicEnabled = !musicEnabled;
+        }
 
-          game.write_text(s)
-          hdr.write_text(h)
-          print('Applied Miyoo Edition v0.1')
+        waitForVBlank();
+        drawFullScreenImageDMA(title);
+        drawCenteredString(108, 0, 240, 8, "MIYOO EDITION", COL_WHITE);
+        drawCenteredString(132, 0, 240, 8, "START - PLAY", COL_WHITE);
+        if (musicEnabled) {
+            drawCenteredString(144, 0, 240, 8, "A - MUSIC ON", COL_WHITE);
+        } else {
+            drawCenteredString(144, 0, 240, 8, "A - MUSIC OFF", COL_WHITE);
+        }
+        break;"""
+              s, n = re.subn(pattern, repl, s, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: Could not patch TITLE state.")
+
+          # 6. Add pause screen before GAMEOVER.
+          if "case PAUSE:" not in s:
+              pause_case = """    case PAUSE:
+        waitForVBlank();
+        drawRectDMA(58, 60, 120, 44, COL_BLACK);
+        drawCenteredString(68, 60, 120, 8, "PAUSED", COL_WHITE);
+        drawCenteredString(84, 60, 120, 8, "START - RESUME", COL_WHITE);
+        break;
+
+"""
+              s, n = re.subn(
+                  r"(\s*case GAMEOVER:)",
+                  "\n" + pause_case + r"\1",
+                  s,
+                  count=1
+              )
+              if n != 1:
+                  raise SystemExit("ERROR: Could not add PAUSE case.")
+
+          game_path.write_text(s)
+          header_path.write_text(h)
+
+          print("Applied Sandtris: Miyoo Edition v0.1 FIX")
           PY
 
       - name: Allow large embedded audio string
+        shell: bash
         run: |
           sed -i 's/-Werror=vla/-Werror=vla -Wno-error=overlength-strings/' Makefile
 
-      - name: Verify patch
+      - name: Verify Miyoo Edition patch
         run: |
           grep -n "MIYOO EDITION" game.c
           grep -n "case PAUSE" game.c
           grep -n "musicEnabled" game.c
+          grep -n "pausedState" game.c
           grep -n "PAUSE" game.h
+          grep -n "typeA_loopBlocks" assets/typeA.h
 
       - name: Build ROM
         run: make
 
-      - name: Rename ROM
-        run: cp Sandtris.gba "Sandtris - Miyoo Edition v0.1.gba"
+      - name: Rename and verify ROM
+        run: |
+          test -f Sandtris.gba
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.1.gba"
 
-      - name: Upload ROM artifact
+      - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-Edition-v0.1
+          name: Sandtris-Miyoo-Edition-v0.1-FIX
           path: "Sandtris - Miyoo Edition v0.1.gba"
           if-no-files-found: error
