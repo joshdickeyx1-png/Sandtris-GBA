@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.2
+name: Build Sandtris Miyoo Edition v0.2.1
 
 on:
   push:
@@ -72,12 +72,10 @@ jobs:
           if count != 1:
               raise SystemExit("ERROR: Could not patch TIMER2_REGDATA in audio.c.")
           audio_path.write_text(audio)
-
-          print(f"Custom music: {byte_count} bytes")
-          print(f"Loop blocks: {loop_blocks}")
+          print(f"Custom music: {byte_count} bytes, {loop_blocks} loop blocks")
           PY
 
-      - name: Apply Miyoo Edition v0.2 patch
+      - name: Apply Miyoo Edition v0.2.1 stability patch
         shell: bash
         run: |
           python3 - <<'PY'
@@ -89,90 +87,103 @@ jobs:
           game = game_path.read_text()
           header = header_path.read_text()
 
-          header, count = re.subn(
+          header, n = re.subn(
               r"(\s*CLEAR3,\s*\n)(\s*GAMEOVER)",
               r"\1    PAUSE,\n    SCORES,\n\2",
               header,
               count=1,
           )
-          if count != 1 and "SCORES" not in header:
-              raise SystemExit("ERROR: Could not add Miyoo states to game.h.")
+          if n != 1:
+              raise SystemExit("ERROR: Could not patch game.h states.")
 
-          var_pattern = r"static int highscores\[4\];"
-          var_code = """static int highscores[4];
-          static int musicEnabled = 1;
-          static int difficulty = 1;
-          static int menuSelection = 0;
-          static int gameOverHandled = 0;
-          static int fallTick = 0;
-          static int saveLoaded = 0;
-          static enum state pausedState = FALL;
+          lines = [
+              "static int highscores[4];",
+              "static int musicEnabled = 1;",
+              "static int difficulty = 1;",
+              "static int menuSelection = 0;",
+              "static int gameOverHandled = 0;",
+              "static int difficultyTick = 0;",
+              "static int saveLoaded = 0;",
+              "static int titleDirty = 1;",
+              "static int scoresDirty = 1;",
+              "static int pauseDirty = 1;",
+              "static enum state pausedState = FALL;",
+              "",
+              "#define SRAM8 ((volatile u8 *)0x0E000000)",
+              '__attribute__((used)) const char saveTypeMarker[] = "SRAM_V113";',
+              "",
+              "static u32 sramRead32(int offset) {",
+              "    return ((u32)SRAM8[offset]) |",
+              "           ((u32)SRAM8[offset + 1] << 8) |",
+              "           ((u32)SRAM8[offset + 2] << 16) |",
+              "           ((u32)SRAM8[offset + 3] << 24);",
+              "}",
+              "",
+              "static void sramWrite32(int offset, u32 value) {",
+              "    SRAM8[offset] = value & 0xFF;",
+              "    SRAM8[offset + 1] = (value >> 8) & 0xFF;",
+              "    SRAM8[offset + 2] = (value >> 16) & 0xFF;",
+              "    SRAM8[offset + 3] = (value >> 24) & 0xFF;",
+              "}",
+              "",
+              "static void saveData(void) {",
+              "    SRAM8[0] = 'S';",
+              "    SRAM8[1] = 'M';",
+              "    SRAM8[2] = 'E';",
+              "    SRAM8[3] = '2';",
+              "    for (int i = 0; i < 4; i++)",
+              "        sramWrite32(4 + i * 4, (u32)highscores[i]);",
+              "    SRAM8[20] = (u8)difficulty;",
+              "    SRAM8[21] = (u8)(musicEnabled ? 1 : 0);",
+              "}",
+              "",
+              "static void loadSave(void) {",
+              "    if (saveLoaded)",
+              "        return;",
+              "    saveLoaded = 1;",
+              "    if (SRAM8[0] == 'S' && SRAM8[1] == 'M' &&",
+              "        SRAM8[2] == 'E' && SRAM8[3] == '2') {",
+              "        for (int i = 0; i < 4; i++)",
+              "            highscores[i] = (int)sramRead32(4 + i * 4);",
+              "        difficulty = SRAM8[20] <= 2 ? SRAM8[20] : 1;",
+              "        musicEnabled = SRAM8[21] ? 1 : 0;",
+              "    } else {",
+              "        for (int i = 0; i < 4; i++)",
+              "            highscores[i] = 0;",
+              "        difficulty = 1;",
+              "        musicEnabled = 1;",
+              "        saveData();",
+              "    }",
+              "}",
+              "",
+              "static void recordHighScore(int newScore) {",
+              "    for (int i = 0; i < 4; i++) {",
+              "        if (newScore <= highscores[i])",
+              "            continue;",
+              "        int displaced = highscores[i];",
+              "        highscores[i] = newScore;",
+              "        newScore = displaced;",
+              "    }",
+              "    saveData();",
+              "}",
+              "",
+              "static void drawDitherPanel(int row, int col, int width, int height) {",
+              "    for (int y = 0; y < height; y++)",
+              "        for (int x = 0; x < width; x++)",
+              "            if (((x + y) & 1) == 0)",
+              "                setPixel(row + y, col + x, COL_BLACK);",
+              "}",
+          ]
+          game, n = re.subn(
+              r"static int highscores\[4\];",
+              "\n".join(lines),
+              game,
+              count=1,
+          )
+          if n != 1:
+              raise SystemExit("ERROR: Could not insert Miyoo data block.")
 
-          #define SRAM8 ((volatile u8 *)0x0E000000)
-          __attribute__((used)) const char saveTypeMarker[] = "SRAM_V113";
-
-          static u32 sramRead32(int offset) {
-              return ((u32)SRAM8[offset]) |
-                     ((u32)SRAM8[offset + 1] << 8) |
-                     ((u32)SRAM8[offset + 2] << 16) |
-                     ((u32)SRAM8[offset + 3] << 24);
-          }
-
-          static void sramWrite32(int offset, u32 value) {
-              SRAM8[offset] = value & 0xFF;
-              SRAM8[offset + 1] = (value >> 8) & 0xFF;
-              SRAM8[offset + 2] = (value >> 16) & 0xFF;
-              SRAM8[offset + 3] = (value >> 24) & 0xFF;
-          }
-
-          static void saveData(void) {
-              SRAM8[0] = 'S';
-              SRAM8[1] = 'M';
-              SRAM8[2] = 'E';
-              SRAM8[3] = '2';
-              for (int i = 0; i < 4; i++) {
-                  sramWrite32(4 + i * 4, (u32)highscores[i]);
-              }
-              SRAM8[20] = (u8)difficulty;
-              SRAM8[21] = (u8)(musicEnabled ? 1 : 0);
-          }
-
-          static void loadSave(void) {
-              if (saveLoaded)
-                  return;
-              saveLoaded = 1;
-
-              if (SRAM8[0] == 'S' && SRAM8[1] == 'M' &&
-                  SRAM8[2] == 'E' && SRAM8[3] == '2') {
-                  for (int i = 0; i < 4; i++) {
-                      highscores[i] = (int)sramRead32(4 + i * 4);
-                  }
-                  difficulty = SRAM8[20] <= 2 ? SRAM8[20] : 1;
-                  musicEnabled = SRAM8[21] ? 1 : 0;
-              } else {
-                  for (int i = 0; i < 4; i++)
-                      highscores[i] = 0;
-                  difficulty = 1;
-                  musicEnabled = 1;
-                  saveData();
-              }
-          }
-
-          static void recordHighScore(int newScore) {
-              for (int i = 0; i < 4; i++) {
-                  if (newScore <= highscores[i])
-                      continue;
-                  int displaced = highscores[i];
-                  highscores[i] = newScore;
-                  newScore = displaced;
-              }
-              saveData();
-          }"""
-          game, count = re.subn(var_pattern, var_code, game, count=1)
-          if count != 1:
-              raise SystemExit("ERROR: Could not install Miyoo save/menu variables.")
-
-          init_pattern = (
+          init_old = (
               r"(\s*combo = 0;\s*\n)"
               r"(\s*fillNum = 1;\s*\n)"
               r"\s*\n"
@@ -181,11 +192,12 @@ jobs:
               r"\s*init_audio\(\);\s*\n"
               r"\s*loop_music\(\);"
           )
-          init_replacement = (
+          init_new = (
               r"\1"
               r"\2"
               "    gameOverHandled = 0;\n"
-              "    fallTick = 0;\n"
+              "    difficultyTick = 0;\n"
+              "    pauseDirty = 1;\n"
               "\n"
               r"\3"
               "    reset_music();\n"
@@ -194,52 +206,117 @@ jobs:
               "        loop_music();\n"
               "    }"
           )
-          game, count = re.subn(init_pattern, init_replacement, game, count=1)
-          if count != 1:
+          game, n = re.subn(init_old, init_new, game, count=1)
+          if n != 1:
               raise SystemExit("ERROR: Could not patch init().")
 
-          drop_pattern = (
-              r"    // move the current piece down 1 cell\s*\n"
-              r"    \+\+pieceCurr\.y;\s*\n"
-              r"    if \(key_is_down\(BUTTON_DOWN\)\)\s*\n"
-              r"        \+\+pieceCurr\.y;"
+          helper_lines = [
+              "",
+              "static int extraHardDrop(void) {",
+              "    ++pieceCurr.y;",
+              "    for (int i = 0; i < 4; i++) {",
+              "        const int *cell = PIECES[pieceCurr.type][pieceCurr.rotation][i];",
+              "        int x = pieceCurr.x + cell[0];",
+              "        int y = pieceCurr.y + cell[1] + 8;",
+              "        for (int offset = 0; offset < 8; offset++) {",
+              "            if (board[y][x + offset + 1]) {",
+              "                play_sfx(drop, drop_bytes);",
+              "                return 1;",
+              "            }",
+              "        }",
+              "    }",
+              "    --comboMult;",
+              "    return 0;",
+              "}",
+              "",
+              "static int updatePieceMiyoo(void) {",
+              "    ++difficultyTick;",
+              "    if (difficulty == 0 && (difficultyTick & 1))",
+              "        return 0;",
+              "    if (updatePiece())",
+              "        return 1;",
+              "    if (difficulty == 2 && (difficultyTick % 3) == 0)",
+              "        return extraHardDrop();",
+              "    return 0;",
+              "}",
+              "",
+              "static void restoreGameplayScreen(void) {",
+              "    waitForVBlank();",
+              "    drawFullScreenImageDMA(bg);",
+              "    drawBoard();",
+              "    drawPiece();",
+              "    drawUI();",
+              "    drawScore();",
+              "}",
+              "",
+              "static void drawTitleMenu(void) {",
+              "    waitForVBlank();",
+              "    drawFullScreenImageDMA(title);",
+              "    drawDitherPanel(48, 38, 164, 104);",
+              "    drawCenteredString(54, 38, 164, 8, \"MIYOO EDITION v0.2.1\", COL_WHITE);",
+              "    char line[28];",
+              "    snprintf(line, sizeof(line), \"%c START GAME\", menuSelection == 0 ? '>' : ' ');",
+              "    drawString(76, 54, line, COL_WHITE);",
+              "    char *diffName = difficulty == 0 ? \"EASY\" : (difficulty == 1 ? \"NORMAL\" : \"HARD\");",
+              "    snprintf(line, sizeof(line), \"%c DIFFICULTY: %s\", menuSelection == 1 ? '>' : ' ', diffName);",
+              "    drawString(92, 54, line, COL_WHITE);",
+              "    snprintf(line, sizeof(line), \"%c MUSIC: %s\", menuSelection == 2 ? '>' : ' ', musicEnabled ? \"ON\" : \"OFF\");",
+              "    drawString(108, 54, line, COL_WHITE);",
+              "    snprintf(line, sizeof(line), \"%c HIGH SCORES\", menuSelection == 3 ? '>' : ' ');",
+              "    drawString(124, 54, line, COL_WHITE);",
+              "    drawCenteredString(142, 38, 164, 8, \"UP/DOWN + A\", COL_WHITE);",
+              "}",
+              "",
+              "static void drawScoresScreen(void) {",
+              "    waitForVBlank();",
+              "    drawFullScreenImageDMA(title);",
+              "    drawDitherPanel(22, 34, 172, 128);",
+              "    drawCenteredString(30, 34, 172, 8, \"MIYOO EDITION\", COL_WHITE);",
+              "    drawCenteredString(46, 34, 172, 8, \"HIGH SCORES\", COL_YELLOW);",
+              "    char line[24];",
+              "    for (int i = 0; i < 4; i++) {",
+              "        snprintf(line, sizeof(line), \"%d. %d\", i + 1, highscores[i]);",
+              "        drawCenteredString(70 + i * 16, 34, 172, 8, line, COL_WHITE);",
+              "    }",
+              "    drawCenteredString(140, 34, 172, 8, \"A/B/START - BACK\", COL_WHITE);",
+              "}",
+              "",
+          ]
+          marker = "\nvoid restart(void) {"
+          if marker not in game:
+              raise SystemExit("ERROR: Could not locate restart().")
+          game = game.replace(marker, "\n".join(helper_lines) + marker, 1)
+
+          old_call = "        if (updatePiece()) {\n            state = SPAWN;"
+          if game.count(old_call) < 2:
+              raise SystemExit("ERROR: Could not locate both updatePiece state calls.")
+          game = game.replace(old_call, "        if (updatePieceMiyoo()) {\n            state = SPAWN;", 2)
+
+          game, n = re.subn(
+              r"void restart\(void\) \{\s*\n\s*reset_music\(\);\s*\n\s*state = TITLE;\s*\n\}",
+              "\n".join([
+                  "void restart(void) {",
+                  "    reset_music();",
+                  "    state = TITLE;",
+                  "    titleDirty = 1;",
+                  "}",
+              ]),
+              game,
+              count=1,
           )
-          drop_code = """    // Miyoo Edition difficulty-controlled fall speed.
-              ++fallTick;
-              int shouldFall = 1;
+          if n != 1:
+              raise SystemExit("ERROR: Could not patch restart().")
 
-              if (difficulty == 0) {
-                  shouldFall = ((fallTick & 1) == 0);
-              }
-
-              if (shouldFall)
-                  ++pieceCurr.y;
-
-              if (difficulty == 2 && (fallTick % 3) == 0)
-                  ++pieceCurr.y;
-
-              if (key_is_down(BUTTON_DOWN))
-                  ++pieceCurr.y;
-
-              if (!shouldFall && !key_is_down(BUTTON_DOWN)) {
-                  --comboMult;
-                  return 0;
-              }"""
-          game, count = re.subn(drop_pattern, drop_code, game, count=1)
-          if count != 1:
-              raise SystemExit("ERROR: Could not patch difficulty fall speed.")
-
-          run_pattern = r"(void run\(void\) \{\s*\n\s*// local vars\s*\n\s*int cleared = 0;)"
-          game, count = re.subn(
-              run_pattern,
+          game, n = re.subn(
+              r"(void run\(void\) \{\s*\n\s*// local vars\s*\n\s*int cleared = 0;)",
               r"\1\n\n    loadSave();",
               game,
               count=1,
           )
-          if count != 1:
-              raise SystemExit("ERROR: Could not add loadSave() to run().")
+          if n != 1:
+              raise SystemExit("ERROR: Could not add loadSave().")
 
-          input_pattern = (
+          old_input = (
               r"\n\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
               r"\s*state = START;\s*\n"
               r"\s*\n"
@@ -252,24 +329,23 @@ jobs:
               "            state = START;",
               "        } else if (state == PAUSE) {",
               "            state = pausedState;",
+              "            pauseDirty = 1;",
+              "            restoreGameplayScreen();",
               "        } else if (state == SCORES) {",
               "            state = TITLE;",
+              "            titleDirty = 1;",
               "        } else if (state != START && state != GAMEOVER) {",
               "            pausedState = state;",
               "            state = PAUSE;",
+              "            pauseDirty = 1;",
               "        }",
               "    }",
               "",
               "    switch (state)",
           ]
-          game, count = re.subn(
-              input_pattern,
-              "\n".join(input_lines),
-              game,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit("ERROR: Could not patch START handling.")
+          game, n = re.subn(old_input, "\n".join(input_lines), game, count=1)
+          if n != 1:
+              raise SystemExit("ERROR: Could not patch START behavior.")
 
           title_pattern = (
               r"    case TITLE:\s*\n"
@@ -281,96 +357,73 @@ jobs:
               r"\s*break;"
           )
           title_lines = [
-              "    case TITLE: {",
+              "    case TITLE:",
               "        if (key_hit(BUTTON_UP)) {",
               "            menuSelection = (menuSelection + 3) % 4;",
+              "            titleDirty = 1;",
               "        }",
               "        if (key_hit(BUTTON_DOWN)) {",
               "            menuSelection = (menuSelection + 1) % 4;",
+              "            titleDirty = 1;",
               "        }",
-              "",
               "        if (key_hit(BUTTON_A)) {",
               "            if (menuSelection == 0) {",
               "                state = START;",
               "            } else if (menuSelection == 1) {",
               "                difficulty = (difficulty + 1) % 3;",
               "                saveData();",
+              "                titleDirty = 1;",
               "            } else if (menuSelection == 2) {",
               "                musicEnabled = !musicEnabled;",
               "                saveData();",
+              "                titleDirty = 1;",
               "            } else {",
               "                state = SCORES;",
+              "                scoresDirty = 1;",
               "            }",
               "        }",
-              "",
-              "        waitForVBlank();",
-              "        drawFullScreenImageDMA(title);",
-              "        drawRectDMA(64, 42, 156, 92, COL_BLACK);",
-              "        drawCenteredString(68, 42, 156, 8, \"MIYOO EDITION v0.2\", COL_WHITE);",
-              "",
-              "        char line[26];",
-              "        snprintf(line, sizeof(line), \"%c START GAME\", menuSelection == 0 ? '>' : ' ');",
-              "        drawString(88, 58, line, COL_WHITE);",
-              "",
-              "        const char *diffName = difficulty == 0 ? \"EASY\" : (difficulty == 1 ? \"NORMAL\" : \"HARD\");",
-              "        snprintf(line, sizeof(line), \"%c DIFFICULTY: %s\", menuSelection == 1 ? '>' : ' ', diffName);",
-              "        drawString(100, 58, line, COL_WHITE);",
-              "",
-              "        snprintf(line, sizeof(line), \"%c MUSIC: %s\", menuSelection == 2 ? '>' : ' ', musicEnabled ? \"ON\" : \"OFF\");",
-              "        drawString(112, 58, line, COL_WHITE);",
-              "",
-              "        snprintf(line, sizeof(line), \"%c HIGH SCORES\", menuSelection == 3 ? '>' : ' ');",
-              "        drawString(124, 58, line, COL_WHITE);",
-              "        drawCenteredString(144, 42, 156, 8, \"UP/DOWN + A\", COL_GRAY);",
+              "        if (state == TITLE && titleDirty) {",
+              "            drawTitleMenu();",
+              "            titleDirty = 0;",
+              "        }",
               "        break;",
-              "    }",
           ]
-          game, count = re.subn(
-              title_pattern,
-              "\n".join(title_lines),
-              game,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit("ERROR: Could not patch TITLE menu.")
+          game, n = re.subn(title_pattern, "\n".join(title_lines), game, count=1)
+          if n != 1:
+              raise SystemExit("ERROR: Could not patch TITLE state.")
 
-          extra_cases = """    case PAUSE:
-              waitForVBlank();
-              drawRectDMA(56, 54, 132, 48, COL_BLACK);
-              drawCenteredString(66, 54, 132, 8, "PAUSED", COL_WHITE);
-              drawCenteredString(84, 54, 132, 8, "START - RESUME", COL_WHITE);
-              break;
-
-          case SCORES: {
-              if (key_hit(BUTTON_A) || key_hit(BUTTON_B)) {
-                  state = TITLE;
-                  break;
-              }
-
-              waitForVBlank();
-              fillScreenDMA(COL_BLACK);
-              drawCenteredString(22, 0, 240, 8, "SANDTRIS: MIYOO EDITION", COL_WHITE);
-              drawCenteredString(40, 0, 240, 8, "HIGH SCORES", COL_YELLOW);
-
-              char hsLine[24];
-              for (int rank = 0; rank < 4; rank++) {
-                  snprintf(hsLine, sizeof(hsLine), "%d. %d", rank + 1, highscores[rank]);
-                  drawCenteredString(64 + rank * 16, 0, 240, 8, hsLine, COL_WHITE);
-              }
-
-              drawCenteredString(138, 0, 240, 8, "A/B/START - BACK", COL_GRAY);
-              break;
-          }
-
-          """
-          game, count = re.subn(
+          cases_lines = [
+              "    case PAUSE:",
+              "        if (pauseDirty) {",
+              "            waitForVBlank();",
+              "            drawDitherPanel(60, 48, 144, 42);",
+              "            drawCenteredString(68, 48, 144, 8, \"PAUSED\", COL_WHITE);",
+              "            drawCenteredString(86, 48, 144, 8, \"START - RESUME\", COL_WHITE);",
+              "            pauseDirty = 0;",
+              "        }",
+              "        break;",
+              "",
+              "    case SCORES:",
+              "        if (key_hit(BUTTON_A) || key_hit(BUTTON_B)) {",
+              "            state = TITLE;",
+              "            titleDirty = 1;",
+              "            break;",
+              "        }",
+              "        if (scoresDirty) {",
+              "            drawScoresScreen();",
+              "            scoresDirty = 0;",
+              "        }",
+              "        break;",
+              "",
+          ]
+          game, n = re.subn(
               r"(\s*case GAMEOVER:)",
-              "\n" + extra_cases + r"\1",
+              "\n" + "\n".join(cases_lines) + r"\1",
               game,
               count=1,
           )
-          if count != 1:
-              raise SystemExit("ERROR: Could not add PAUSE/SCORES cases.")
+          if n != 1:
+              raise SystemExit("ERROR: Could not insert PAUSE/SCORES.")
 
           gameover_pattern = (
               r"    case GAMEOVER:\s*\n"
@@ -388,62 +441,53 @@ jobs:
               r"\s*\n"
               r"\s*break;"
           )
-          gameover_lines = [
-              "    case GAMEOVER: {",
+          go_lines = [
+              "    case GAMEOVER:",
               "        if (!gameOverHandled) {",
               "            stop_music();",
               "            recordHighScore(score);",
               "            gameOverHandled = 1;",
+              "            waitForVBlank();",
+              "            drawDitherPanel(42, 42, 156, 84);",
+              "            drawCenteredString(50, 42, 156, 8, \"GAME OVER\", COL_WHITE);",
+              "            char finalLine[24];",
+              "            snprintf(finalLine, sizeof(finalLine), \"SCORE: %d\", score);",
+              "            drawCenteredString(68, 42, 156, 8, finalLine, COL_YELLOW);",
+              "            snprintf(finalLine, sizeof(finalLine), \"BEST: %d\", highscores[0]);",
+              "            drawCenteredString(82, 42, 156, 8, finalLine, COL_WHITE);",
+              "            drawCenteredString(102, 42, 156, 8, \"A - PLAY AGAIN\", COL_WHITE);",
+              "            drawCenteredString(114, 42, 156, 8, \"B - MAIN MENU\", COL_WHITE);",
               "        }",
-              "",
               "        if (key_hit(BUTTON_A)) {",
               "            state = START;",
-              "            break;",
-              "        }",
-              "        if (key_hit(BUTTON_B)) {",
+              "        } else if (key_hit(BUTTON_B)) {",
               "            state = TITLE;",
-              "            break;",
+              "            titleDirty = 1;",
               "        }",
-              "",
-              "        waitForVBlank();",
-              "        drawRectDMA(42, 44, 152, 78, COL_BLACK);",
-              "        drawCenteredString(50, 44, 152, 8, \"GAME OVER\", COL_WHITE);",
-              "        char finalLine[24];",
-              "        snprintf(finalLine, sizeof(finalLine), \"SCORE: %d\", score);",
-              "        drawCenteredString(68, 44, 152, 8, finalLine, COL_YELLOW);",
-              "        snprintf(finalLine, sizeof(finalLine), \"BEST: %d\", highscores[0]);",
-              "        drawCenteredString(82, 44, 152, 8, finalLine, COL_WHITE);",
-              "        drawCenteredString(102, 44, 152, 8, \"A - PLAY AGAIN\", COL_WHITE);",
-              "        drawCenteredString(114, 44, 152, 8, \"B - MAIN MENU\", COL_WHITE);",
               "        break;",
-              "    }",
           ]
-          game, count = re.subn(
-              gameover_pattern,
-              "\n".join(gameover_lines),
-              game,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit("ERROR: Could not patch GAMEOVER state.")
+          game, n = re.subn(gameover_pattern, "\n".join(go_lines), game, count=1)
+          if n != 1:
+              raise SystemExit("ERROR: Could not patch GAMEOVER.")
 
           game_path.write_text(game)
           header_path.write_text(header)
-          print("Applied Sandtris: Miyoo Edition v0.2")
+          print("Applied Sandtris: Miyoo Edition v0.2.1 stability patch")
           PY
 
       - name: Allow large embedded audio string
         run: |
           sed -i 's/-Werror=vla/-Werror=vla -Wno-error=overlength-strings/' Makefile
 
-      - name: Verify Miyoo Edition v0.2 patch
+      - name: Verify v0.2.1 patch
         run: |
-          grep -n "MIYOO EDITION v0.2" game.c
+          grep -n "MIYOO EDITION v0.2.1" game.c
           grep -n "SRAM_V113" game.c
-          grep -n "recordHighScore" game.c
+          grep -n "drawDitherPanel" game.c
+          grep -n "restoreGameplayScreen" game.c
+          grep -n "updatePieceMiyoo" game.c
           grep -n "case PAUSE" game.c
           grep -n "case SCORES" game.c
-          grep -n "DIFFICULTY" game.c
           grep -n "PAUSE" game.h
           grep -n "SCORES" game.h
           grep -n "typeA_loopBlocks" assets/typeA.h
@@ -451,16 +495,16 @@ jobs:
       - name: Build ROM
         run: make
 
-      - name: Rename and verify ROM
+      - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.2.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.2.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.2.1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.2.1.gba"
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-Edition-v0.2
-          path: "Sandtris - Miyoo Edition v0.2.gba"
+          name: Sandtris-Miyoo-Edition-v0.2.1
+          path: "Sandtris - Miyoo Edition v0.2.1.gba"
           if-no-files-found: error
