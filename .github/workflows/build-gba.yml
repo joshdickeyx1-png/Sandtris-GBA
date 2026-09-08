@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.2.1
+name: Build Sandtris Miyoo Edition v0.2.2
 
 on:
   push:
@@ -75,7 +75,7 @@ jobs:
           print(f"Custom music: {byte_count} bytes, {loop_blocks} loop blocks")
           PY
 
-      - name: Apply Miyoo Edition v0.2.1 stability patch
+      - name: Apply Miyoo Edition v0.2.2 stability patch
         shell: bash
         run: |
           python3 - <<'PY'
@@ -105,6 +105,7 @@ jobs:
               "static int difficultyTick = 0;",
               "static int saveLoaded = 0;",
               "static int titleDirty = 1;",
+              "static int titleBackgroundDrawn = 0;",
               "static int scoresDirty = 1;",
               "static int pauseDirty = 1;",
               "static enum state pausedState = FALL;",
@@ -249,22 +250,46 @@ jobs:
               "    drawScore();",
               "}",
               "",
+              "static void restoreTitleStrip(int row, int col, int width, int height) {",
+              "    for (int y = 0; y < height; y++)",
+              "        for (int x = 0; x < width; x++)",
+              "            setPixel(row + y, col + x, title[OFFSET(row + y, col + x, WIDTH)]);",
+              "}",
+              "",
+              "static void drawShadowString(int row, int col, char *str, u16 color) {",
+              "    drawString(row + 1, col + 1, str, COL_BLACK);",
+              "    drawString(row, col, str, color);",
+              "}",
+              "",
+              "static void drawCenteredShadowString(int row, int col, int width, int height, char *str, u16 color) {",
+              "    drawCenteredString(row + 1, col + 1, width, height, str, COL_BLACK);",
+              "    drawCenteredString(row, col, width, height, str, color);",
+              "}",
+              "",
               "static void drawTitleMenu(void) {",
               "    waitForVBlank();",
-              "    drawFullScreenImageDMA(title);",
-              "    drawDitherPanel(48, 38, 164, 104);",
-              "    drawCenteredString(54, 38, 164, 8, \"MIYOO EDITION v0.2.1\", COL_WHITE);",
+              "    if (!titleBackgroundDrawn) {",
+              "        drawFullScreenImageDMA(title);",
+              "        titleBackgroundDrawn = 1;",
+              "        drawCenteredShadowString(54, 38, 164, 8, \"MIYOO EDITION v0.2.2\", COL_WHITE);",
+              "        drawCenteredShadowString(142, 38, 164, 8, \"UP/DOWN + A\", COL_WHITE);",
+              "    }",
+              "",
+              "    restoreTitleStrip(73, 50, 164, 13);",
+              "    restoreTitleStrip(89, 50, 164, 13);",
+              "    restoreTitleStrip(105, 50, 164, 13);",
+              "    restoreTitleStrip(121, 50, 164, 13);",
+              "",
               "    char line[28];",
               "    snprintf(line, sizeof(line), \"%c START GAME\", menuSelection == 0 ? '>' : ' ');",
-              "    drawString(76, 54, line, COL_WHITE);",
+              "    drawShadowString(76, 54, line, menuSelection == 0 ? COL_YELLOW : COL_WHITE);",
               "    char *diffName = difficulty == 0 ? \"EASY\" : (difficulty == 1 ? \"NORMAL\" : \"HARD\");",
               "    snprintf(line, sizeof(line), \"%c DIFFICULTY: %s\", menuSelection == 1 ? '>' : ' ', diffName);",
-              "    drawString(92, 54, line, COL_WHITE);",
+              "    drawShadowString(92, 54, line, menuSelection == 1 ? COL_YELLOW : COL_WHITE);",
               "    snprintf(line, sizeof(line), \"%c MUSIC: %s\", menuSelection == 2 ? '>' : ' ', musicEnabled ? \"ON\" : \"OFF\");",
-              "    drawString(108, 54, line, COL_WHITE);",
+              "    drawShadowString(108, 54, line, menuSelection == 2 ? COL_YELLOW : COL_WHITE);",
               "    snprintf(line, sizeof(line), \"%c HIGH SCORES\", menuSelection == 3 ? '>' : ' ');",
-              "    drawString(124, 54, line, COL_WHITE);",
-              "    drawCenteredString(142, 38, 164, 8, \"UP/DOWN + A\", COL_WHITE);",
+              "    drawShadowString(124, 54, line, menuSelection == 3 ? COL_YELLOW : COL_WHITE);",
               "}",
               "",
               "static void drawScoresScreen(void) {",
@@ -299,6 +324,7 @@ jobs:
                   "    reset_music();",
                   "    state = TITLE;",
                   "    titleDirty = 1;",
+                  "    titleBackgroundDrawn = 0;",
                   "}",
               ]),
               game,
@@ -334,6 +360,7 @@ jobs:
               "        } else if (state == SCORES) {",
               "            state = TITLE;",
               "            titleDirty = 1;",
+              "            titleBackgroundDrawn = 0;",
               "        } else if (state != START && state != GAMEOVER) {",
               "            pausedState = state;",
               "            state = PAUSE;",
@@ -396,9 +423,8 @@ jobs:
               "    case PAUSE:",
               "        if (pauseDirty) {",
               "            waitForVBlank();",
-              "            drawDitherPanel(60, 48, 144, 42);",
-              "            drawCenteredString(68, 48, 144, 8, \"PAUSED\", COL_WHITE);",
-              "            drawCenteredString(86, 48, 144, 8, \"START - RESUME\", COL_WHITE);",
+              "            drawCenteredShadowString(68, 48, 144, 8, \"PAUSED\", COL_YELLOW);",
+              "            drawCenteredShadowString(86, 48, 144, 8, \"START - RESUME\", COL_WHITE);",
               "            pauseDirty = 0;",
               "        }",
               "        break;",
@@ -407,6 +433,7 @@ jobs:
               "        if (key_hit(BUTTON_A) || key_hit(BUTTON_B)) {",
               "            state = TITLE;",
               "            titleDirty = 1;",
+              "            titleBackgroundDrawn = 0;",
               "            break;",
               "        }",
               "        if (scoresDirty) {",
@@ -463,6 +490,7 @@ jobs:
               "        } else if (key_hit(BUTTON_B)) {",
               "            state = TITLE;",
               "            titleDirty = 1;",
+              "            titleBackgroundDrawn = 0;",
               "        }",
               "        break;",
           ]
@@ -472,18 +500,19 @@ jobs:
 
           game_path.write_text(game)
           header_path.write_text(header)
-          print("Applied Sandtris: Miyoo Edition v0.2.1 stability patch")
+          print("Applied Sandtris: Miyoo Edition v0.2.2 visual polish patch")
           PY
 
       - name: Allow large embedded audio string
         run: |
           sed -i 's/-Werror=vla/-Werror=vla -Wno-error=overlength-strings/' Makefile
 
-      - name: Verify v0.2.1 patch
+      - name: Verify v0.2.2 patch
         run: |
-          grep -n "MIYOO EDITION v0.2.1" game.c
+          grep -n "MIYOO EDITION v0.2.2" game.c
           grep -n "SRAM_V113" game.c
-          grep -n "drawDitherPanel" game.c
+          grep -n "restoreTitleStrip" game.c
+          grep -n "drawShadowString" game.c
           grep -n "restoreGameplayScreen" game.c
           grep -n "updatePieceMiyoo" game.c
           grep -n "case PAUSE" game.c
@@ -498,13 +527,13 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.1.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.2.1.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.2.1.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.2.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.2.2.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.2.2.gba"
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-Edition-v0.2.1
-          path: "Sandtris - Miyoo Edition v0.2.1.gba"
+          name: Sandtris-Miyoo-Edition-v0.2.2
+          path: "Sandtris - Miyoo Edition v0.2.2.gba"
           if-no-files-found: error
