@@ -1,4 +1,4 @@
-name: Build GBA ROM
+name: Build Sandtris Miyoo Edition
 
 on:
   push:
@@ -16,99 +16,120 @@ jobs:
       - name: Install ARM toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            make \
-            gcc-arm-none-eabi \
-            binutils-arm-none-eabi \
-            libnewlib-arm-none-eabi
+          sudo apt-get install -y make gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
 
       - name: Generate custom music files
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import math
-          import re
+          import math, re
+          raw = Path('assets/audio/typeA.raw')
+          if not raw.exists():
+              raise SystemExit('ERROR: assets/audio/typeA.raw was not found.')
+          data = raw.read_bytes()
+          n = len(data)
+          rate = 16834
+          blocks = math.ceil(n / 65536)
 
-          raw_path = Path("assets/audio/typeA.raw")
-          c_path = Path("assets/typeA.c")
-          h_path = Path("assets/typeA.h")
-          audio_path = Path("audio.c")
-
-          if not raw_path.exists():
-              raise SystemExit("ERROR: assets/audio/typeA.raw was not found.")
-
-          data = raw_path.read_bytes()
-          byte_count = len(data)
-          sample_rate = 16834
-          loop_blocks = math.ceil(byte_count / 65536)
-
-          print(f"Music bytes: {byte_count}")
-          print(f"Approx duration: {byte_count / sample_rate:.2f} seconds")
-          print(f"Loop blocks: {loop_blocks}")
-
-          h_path.write_text(
-              "#ifndef TYPE_A_H\n"
-              "#define TYPE_A_H\n\n"
-              f"#define typeA_bytes {byte_count}\n"
-              f"#define typeA_sampleRate {sample_rate}\n"
-              f"#define typeA_loopBlocks {loop_blocks}\n\n"
-              "extern const char typeA[];\n\n"
-              "#endif\n"
+          Path('assets/typeA.h').write_text(
+              '#ifndef TYPE_A_H\n#define TYPE_A_H\n\n'
+              f'#define typeA_bytes {n}\n'
+              f'#define typeA_sampleRate {rate}\n'
+              f'#define typeA_loopBlocks {blocks}\n\n'
+              'extern const char typeA[];\n\n#endif\n'
           )
 
-          # Keep the same representation the original project expects.
-          with c_path.open("w", newline="\n") as f:
-              f.write('#include "typeA.h"\n\n')
-              f.write("const char typeA[] =\n")
-              for i in range(0, byte_count, 32):
+          with Path('assets/typeA.c').open('w') as f:
+              f.write('#include "typeA.h"\n\nconst char typeA[] =\n')
+              for i in range(0, n, 32):
                   chunk = data[i:i+32]
-                  f.write('"' + ''.join(f"\\x{b:02x}" for b in chunk) + '"\n')
-              f.write(";\n")
+                  f.write('"' + ''.join(f'\\x{b:02x}' for b in chunk) + '"\n')
+              f.write(';\n')
 
-          source = audio_path.read_text()
-          source, count = re.subn(
-              r"TIMER2_REGDATA\s*=\s*65536\s*-\s*(?:\d+|typeA_loopBlocks)\s*;",
-              "TIMER2_REGDATA = 65536 - typeA_loopBlocks;",
-              source
+          p = Path('audio.c')
+          s = p.read_text()
+          s, count = re.subn(
+              r'TIMER2_REGDATA\s*=\s*65536\s*-\s*(?:\d+|typeA_loopBlocks)\s*;',
+              'TIMER2_REGDATA = 65536 - typeA_loopBlocks;',
+              s
           )
           if count != 1:
-              raise SystemExit("ERROR: Could not patch TIMER2_REGDATA in audio.c.")
+              raise SystemExit('ERROR: Could not patch TIMER2_REGDATA.')
+          p.write_text(s)
+          PY
 
-          audio_path.write_text(source)
+      - name: Apply Miyoo Edition v0.1 patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          game = Path('game.c')
+          hdr = Path('game.h')
+          s = game.read_text()
+          h = hdr.read_text()
+
+          if '    PAUSE,' not in h:
+              h = h.replace(
+                  '    CLEAR3,\n    GAMEOVER\n};',
+                  '    CLEAR3,\n    PAUSE,\n    GAMEOVER\n};'
+              )
+
+          if 'static int musicEnabled' not in s:
+              s = s.replace(
+                  'static int highscores[4];',
+                  'static int highscores[4];\nstatic int musicEnabled = 1;'
+              )
+
+          old_audio = '    // play audio\n    reset_music();\n    init_audio();\n    loop_music();'
+          new_audio = '    // play audio\n    reset_music();\n    if (musicEnabled) {\n        init_audio();\n        loop_music();\n    }'
+          if old_audio in s:
+              s = s.replace(old_audio, new_audio)
+
+          old_input = '    if (key_hit(BUTTON_SELECT))\n        restart();\n\n    if (key_hit(BUTTON_START))\n        state = START;'
+          new_input = '    if (key_hit(BUTTON_SELECT))\n        restart();\n\n    if (key_hit(BUTTON_START)) {\n        if (state == TITLE) {\n            state = START;\n        } else if (state == PAUSE) {\n            state = FALL;\n        } else if (state != START && state != GAMEOVER) {\n            state = PAUSE;\n        }\n    }'
+          if old_input not in s:
+              raise SystemExit('ERROR: Could not patch Start-button handling.')
+          s = s.replace(old_input, new_input)
+
+          old_title = '    case TITLE:\n        if (key_hit(BUTTON_START))\n            state = START;\n\n        waitForVBlank();\n        drawFullScreenImageDMA(title);\n        break;'
+          new_title = '    case TITLE:\n        if (key_hit(BUTTON_A)) {\n            musicEnabled = !musicEnabled;\n        }\n\n        waitForVBlank();\n        drawFullScreenImageDMA(title);\n        drawString(116, 68, "MIYOO EDITION", COL_WHITE);\n        drawString(136, 52, "START  PLAY", COL_WHITE);\n        drawString(146, 52,\n                   musicEnabled ? "A      MUSIC ON" : "A      MUSIC OFF",\n                   COL_WHITE);\n        break;'
+          if old_title not in s:
+              raise SystemExit('ERROR: Could not patch TITLE state.')
+          s = s.replace(old_title, new_title)
+
+          if 'case PAUSE:' not in s:
+              marker = '    case GAMEOVER:'
+              pause_case = '    case PAUSE:\n        waitForVBlank();\n        drawRectDMA(66, 76, 88, 28, 0);\n        drawString(72, 96, "PAUSED", COL_WHITE);\n        drawString(84, 80, "START RESUME", COL_WHITE);\n        break;\n'
+              if marker not in s:
+                  raise SystemExit('ERROR: Could not locate GAMEOVER state.')
+              s = s.replace(marker, pause_case + marker)
+
+          game.write_text(s)
+          hdr.write_text(h)
+          print('Applied Miyoo Edition v0.1')
           PY
 
       - name: Allow large embedded audio string
-        shell: bash
         run: |
-          # The project's flags use -Werror. GCC warns when a C string is
-          # larger than ISO C's guaranteed 4095-character minimum.
-          # The ARM GCC toolchain can still compile it, so make only this
-          # warning non-fatal.
           sed -i 's/-Werror=vla/-Werror=vla -Wno-error=overlength-strings/' Makefile
 
-          echo "Compiler flags after patch:"
-          grep -n "Werror=vla" Makefile || true
-
-      - name: Verify generated music
+      - name: Verify patch
         run: |
-          grep "typeA_bytes" assets/typeA.h
-          grep "typeA_loopBlocks" assets/typeA.h
-          grep "TIMER2_REGDATA" audio.c
-          ls -lh assets/audio/typeA.raw assets/typeA.c assets/typeA.h
+          grep -n "MIYOO EDITION" game.c
+          grep -n "case PAUSE" game.c
+          grep -n "musicEnabled" game.c
+          grep -n "PAUSE" game.h
 
       - name: Build ROM
         run: make
 
-      - name: Verify ROM
-        run: |
-          test -f Sandtris.gba
-          ls -lh Sandtris.gba
-          sha256sum Sandtris.gba
+      - name: Rename ROM
+        run: cp Sandtris.gba "Sandtris - Miyoo Edition v0.1.gba"
 
       - name: Upload ROM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-gba-custom-music
-          path: Sandtris.gba
+          name: Sandtris-Miyoo-Edition-v0.1
+          path: "Sandtris - Miyoo Edition v0.1.gba"
           if-no-files-found: error
