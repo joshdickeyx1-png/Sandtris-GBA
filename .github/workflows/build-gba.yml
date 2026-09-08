@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition
+name: Build Sandtris Miyoo Edition v0.2
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           sample_rate = 16834
           loop_blocks = math.ceil(byte_count / 65536)
 
-          header_lines = [
+          Path("assets/typeA.h").write_text("\n".join([
               "#ifndef TYPE_A_H",
               "#define TYPE_A_H",
               "",
@@ -51,16 +51,14 @@ jobs:
               "",
               "#endif",
               "",
-          ]
-          Path("assets/typeA.h").write_text("\n".join(header_lines))
+          ]))
 
           with Path("assets/typeA.c").open("w", newline="\n") as f:
               f.write('#include "typeA.h"\n\n')
               f.write("const char typeA[] =\n")
               for i in range(0, byte_count, 32):
                   chunk = data[i:i + 32]
-                  escaped = "".join(f"\\x{b:02x}" for b in chunk)
-                  f.write('"' + escaped + '"\n')
+                  f.write('"' + "".join(f"\\x{b:02x}" for b in chunk) + '"\n')
               f.write(";\n")
 
           audio_path = Path("audio.c")
@@ -75,11 +73,11 @@ jobs:
               raise SystemExit("ERROR: Could not patch TIMER2_REGDATA in audio.c.")
           audio_path.write_text(audio)
 
-          print(f"Custom music bytes: {byte_count}")
+          print(f"Custom music: {byte_count} bytes")
           print(f"Loop blocks: {loop_blocks}")
           PY
 
-      - name: Apply Miyoo Edition v0.1 patch
+      - name: Apply Miyoo Edition v0.2 patch
         shell: bash
         run: |
           python3 - <<'PY'
@@ -91,159 +89,363 @@ jobs:
           game = game_path.read_text()
           header = header_path.read_text()
 
-          # Add PAUSE enum before GAMEOVER.
-          if "    PAUSE," not in header:
-              header, count = re.subn(
-                  r"(\s*CLEAR3,\s*\n)(\s*GAMEOVER)",
-                  r"\1    PAUSE,\n\2",
-                  header,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit("ERROR: Could not add PAUSE state to game.h.")
+          header, count = re.subn(
+              r"(\s*CLEAR3,\s*\n)(\s*GAMEOVER)",
+              r"\1    PAUSE,\n    SCORES,\n\2",
+              header,
+              count=1,
+          )
+          if count != 1 and "SCORES" not in header:
+              raise SystemExit("ERROR: Could not add Miyoo states to game.h.")
 
-          # Add Miyoo state variables.
-          if "static int musicEnabled" not in game:
-              game, count = re.subn(
-                  r"(static int highscores\[4\];)",
-                  r"\1\nstatic int musicEnabled = 1;\nstatic enum state pausedState = FALL;",
-                  game,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit("ERROR: Could not add Miyoo state variables.")
+          var_pattern = r"static int highscores\[4\];"
+          var_code = """static int highscores[4];
+          static int musicEnabled = 1;
+          static int difficulty = 1;
+          static int menuSelection = 0;
+          static int gameOverHandled = 0;
+          static int fallTick = 0;
+          static int saveLoaded = 0;
+          static enum state pausedState = FALL;
 
-          # Make music startup obey the toggle.
-          if "if (musicEnabled)" not in game:
-              music_pattern = (
-                  r"(\s*// play audio\s*\n)"
-                  r"(\s*reset_music\(\);\s*\n)"
-                  r"\s*init_audio\(\);\s*\n"
-                  r"\s*loop_music\(\);"
-              )
-              music_replacement = (
-                  r"\1"
-                  r"\2"
-                  "    if (musicEnabled) {\n"
-                  "        init_audio();\n"
-                  "        loop_music();\n"
-                  "    }"
-              )
-              game, count = re.subn(
-                  music_pattern,
-                  music_replacement,
-                  game,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit("ERROR: Could not patch music startup.")
+          #define SRAM8 ((volatile u8 *)0x0E000000)
+          __attribute__((used)) const char saveTypeMarker[] = "SRAM_V113";
 
-          # Replace original global START behavior.
-          if "pausedState = state;" not in game:
-              start_pattern = (
-                  r"\n\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
-                  r"\s*state = START;\s*\n"
-                  r"\s*\n"
-                  r"\s*switch \(state\)"
-              )
-              start_lines = [
-                  "",
-                  "    if (key_hit(BUTTON_START)) {",
-                  "        if (state == TITLE) {",
-                  "            state = START;",
-                  "        } else if (state == PAUSE) {",
-                  "            state = pausedState;",
-                  "        } else if (state != START && state != GAMEOVER) {",
-                  "            pausedState = state;",
-                  "            state = PAUSE;",
-                  "        }",
-                  "    }",
-                  "",
-                  "    switch (state)",
-              ]
-              game, count = re.subn(
-                  start_pattern,
-                  "\n".join(start_lines),
-                  game,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit("ERROR: Could not patch START button handling.")
+          static u32 sramRead32(int offset) {
+              return ((u32)SRAM8[offset]) |
+                     ((u32)SRAM8[offset + 1] << 8) |
+                     ((u32)SRAM8[offset + 2] << 16) |
+                     ((u32)SRAM8[offset + 3] << 24);
+          }
 
-          # Replace TITLE case.
-          if "MIYOO EDITION" not in game:
-              title_pattern = (
-                  r"    case TITLE:\s*\n"
-                  r"\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
-                  r"\s*state = START;\s*\n"
-                  r"\s*\n"
-                  r"\s*waitForVBlank\(\);\s*\n"
-                  r"\s*drawFullScreenImageDMA\(title\);\s*\n"
-                  r"\s*break;"
-              )
-              title_lines = [
-                  "    case TITLE:",
-                  "        if (key_hit(BUTTON_A)) {",
-                  "            musicEnabled = !musicEnabled;",
-                  "        }",
-                  "",
-                  "        waitForVBlank();",
-                  "        drawFullScreenImageDMA(title);",
-                  '        drawCenteredString(108, 0, 240, 8, "MIYOO EDITION", COL_WHITE);',
-                  '        drawCenteredString(132, 0, 240, 8, "START - PLAY", COL_WHITE);',
-                  "        if (musicEnabled) {",
-                  '            drawCenteredString(144, 0, 240, 8, "A - MUSIC ON", COL_WHITE);',
-                  "        } else {",
-                  '            drawCenteredString(144, 0, 240, 8, "A - MUSIC OFF", COL_WHITE);',
-                  "        }",
-                  "        break;",
-              ]
-              game, count = re.subn(
-                  title_pattern,
-                  "\n".join(title_lines),
-                  game,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit("ERROR: Could not patch TITLE state.")
+          static void sramWrite32(int offset, u32 value) {
+              SRAM8[offset] = value & 0xFF;
+              SRAM8[offset + 1] = (value >> 8) & 0xFF;
+              SRAM8[offset + 2] = (value >> 16) & 0xFF;
+              SRAM8[offset + 3] = (value >> 24) & 0xFF;
+          }
 
-          # Insert PAUSE case before GAMEOVER.
-          if "case PAUSE:" not in game:
-              pause_lines = [
-                  "    case PAUSE:",
-                  "        waitForVBlank();",
-                  "        drawRectDMA(58, 60, 120, 44, COL_BLACK);",
-                  '        drawCenteredString(68, 60, 120, 8, "PAUSED", COL_WHITE);',
-                  '        drawCenteredString(84, 60, 120, 8, "START - RESUME", COL_WHITE);',
-                  "        break;",
-                  "",
-              ]
-              pause_code = "\n".join(pause_lines)
-              game, count = re.subn(
-                  r"(\s*case GAMEOVER:)",
-                  "\n" + pause_code + r"\1",
-                  game,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit("ERROR: Could not add PAUSE case.")
+          static void saveData(void) {
+              SRAM8[0] = 'S';
+              SRAM8[1] = 'M';
+              SRAM8[2] = 'E';
+              SRAM8[3] = '2';
+              for (int i = 0; i < 4; i++) {
+                  sramWrite32(4 + i * 4, (u32)highscores[i]);
+              }
+              SRAM8[20] = (u8)difficulty;
+              SRAM8[21] = (u8)(musicEnabled ? 1 : 0);
+          }
+
+          static void loadSave(void) {
+              if (saveLoaded)
+                  return;
+              saveLoaded = 1;
+
+              if (SRAM8[0] == 'S' && SRAM8[1] == 'M' &&
+                  SRAM8[2] == 'E' && SRAM8[3] == '2') {
+                  for (int i = 0; i < 4; i++) {
+                      highscores[i] = (int)sramRead32(4 + i * 4);
+                  }
+                  difficulty = SRAM8[20] <= 2 ? SRAM8[20] : 1;
+                  musicEnabled = SRAM8[21] ? 1 : 0;
+              } else {
+                  for (int i = 0; i < 4; i++)
+                      highscores[i] = 0;
+                  difficulty = 1;
+                  musicEnabled = 1;
+                  saveData();
+              }
+          }
+
+          static void recordHighScore(int newScore) {
+              for (int i = 0; i < 4; i++) {
+                  if (newScore <= highscores[i])
+                      continue;
+                  int displaced = highscores[i];
+                  highscores[i] = newScore;
+                  newScore = displaced;
+              }
+              saveData();
+          }"""
+          game, count = re.subn(var_pattern, var_code, game, count=1)
+          if count != 1:
+              raise SystemExit("ERROR: Could not install Miyoo save/menu variables.")
+
+          init_pattern = (
+              r"(\s*combo = 0;\s*\n)"
+              r"(\s*fillNum = 1;\s*\n)"
+              r"\s*\n"
+              r"(\s*// play audio\s*\n)"
+              r"\s*reset_music\(\);\s*\n"
+              r"\s*init_audio\(\);\s*\n"
+              r"\s*loop_music\(\);"
+          )
+          init_replacement = (
+              r"\1"
+              r"\2"
+              "    gameOverHandled = 0;\n"
+              "    fallTick = 0;\n"
+              "\n"
+              r"\3"
+              "    reset_music();\n"
+              "    if (musicEnabled) {\n"
+              "        init_audio();\n"
+              "        loop_music();\n"
+              "    }"
+          )
+          game, count = re.subn(init_pattern, init_replacement, game, count=1)
+          if count != 1:
+              raise SystemExit("ERROR: Could not patch init().")
+
+          drop_pattern = (
+              r"    // move the current piece down 1 cell\s*\n"
+              r"    \+\+pieceCurr\.y;\s*\n"
+              r"    if \(key_is_down\(BUTTON_DOWN\)\)\s*\n"
+              r"        \+\+pieceCurr\.y;"
+          )
+          drop_code = """    // Miyoo Edition difficulty-controlled fall speed.
+              ++fallTick;
+              int shouldFall = 1;
+
+              if (difficulty == 0) {
+                  shouldFall = ((fallTick & 1) == 0);
+              }
+
+              if (shouldFall)
+                  ++pieceCurr.y;
+
+              if (difficulty == 2 && (fallTick % 3) == 0)
+                  ++pieceCurr.y;
+
+              if (key_is_down(BUTTON_DOWN))
+                  ++pieceCurr.y;
+
+              if (!shouldFall && !key_is_down(BUTTON_DOWN)) {
+                  --comboMult;
+                  return 0;
+              }"""
+          game, count = re.subn(drop_pattern, drop_code, game, count=1)
+          if count != 1:
+              raise SystemExit("ERROR: Could not patch difficulty fall speed.")
+
+          run_pattern = r"(void run\(void\) \{\s*\n\s*// local vars\s*\n\s*int cleared = 0;)"
+          game, count = re.subn(
+              run_pattern,
+              r"\1\n\n    loadSave();",
+              game,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("ERROR: Could not add loadSave() to run().")
+
+          input_pattern = (
+              r"\n\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
+              r"\s*state = START;\s*\n"
+              r"\s*\n"
+              r"\s*switch \(state\)"
+          )
+          input_lines = [
+              "",
+              "    if (key_hit(BUTTON_START)) {",
+              "        if (state == TITLE) {",
+              "            state = START;",
+              "        } else if (state == PAUSE) {",
+              "            state = pausedState;",
+              "        } else if (state == SCORES) {",
+              "            state = TITLE;",
+              "        } else if (state != START && state != GAMEOVER) {",
+              "            pausedState = state;",
+              "            state = PAUSE;",
+              "        }",
+              "    }",
+              "",
+              "    switch (state)",
+          ]
+          game, count = re.subn(
+              input_pattern,
+              "\n".join(input_lines),
+              game,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("ERROR: Could not patch START handling.")
+
+          title_pattern = (
+              r"    case TITLE:\s*\n"
+              r"\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
+              r"\s*state = START;\s*\n"
+              r"\s*\n"
+              r"\s*waitForVBlank\(\);\s*\n"
+              r"\s*drawFullScreenImageDMA\(title\);\s*\n"
+              r"\s*break;"
+          )
+          title_lines = [
+              "    case TITLE: {",
+              "        if (key_hit(BUTTON_UP)) {",
+              "            menuSelection = (menuSelection + 3) % 4;",
+              "        }",
+              "        if (key_hit(BUTTON_DOWN)) {",
+              "            menuSelection = (menuSelection + 1) % 4;",
+              "        }",
+              "",
+              "        if (key_hit(BUTTON_A)) {",
+              "            if (menuSelection == 0) {",
+              "                state = START;",
+              "            } else if (menuSelection == 1) {",
+              "                difficulty = (difficulty + 1) % 3;",
+              "                saveData();",
+              "            } else if (menuSelection == 2) {",
+              "                musicEnabled = !musicEnabled;",
+              "                saveData();",
+              "            } else {",
+              "                state = SCORES;",
+              "            }",
+              "        }",
+              "",
+              "        waitForVBlank();",
+              "        drawFullScreenImageDMA(title);",
+              "        drawRectDMA(64, 42, 156, 92, COL_BLACK);",
+              "        drawCenteredString(68, 42, 156, 8, \"MIYOO EDITION v0.2\", COL_WHITE);",
+              "",
+              "        char line[26];",
+              "        snprintf(line, sizeof(line), \"%c START GAME\", menuSelection == 0 ? '>' : ' ');",
+              "        drawString(88, 58, line, COL_WHITE);",
+              "",
+              "        const char *diffName = difficulty == 0 ? \"EASY\" : (difficulty == 1 ? \"NORMAL\" : \"HARD\");",
+              "        snprintf(line, sizeof(line), \"%c DIFFICULTY: %s\", menuSelection == 1 ? '>' : ' ', diffName);",
+              "        drawString(100, 58, line, COL_WHITE);",
+              "",
+              "        snprintf(line, sizeof(line), \"%c MUSIC: %s\", menuSelection == 2 ? '>' : ' ', musicEnabled ? \"ON\" : \"OFF\");",
+              "        drawString(112, 58, line, COL_WHITE);",
+              "",
+              "        snprintf(line, sizeof(line), \"%c HIGH SCORES\", menuSelection == 3 ? '>' : ' ');",
+              "        drawString(124, 58, line, COL_WHITE);",
+              "        drawCenteredString(144, 42, 156, 8, \"UP/DOWN + A\", COL_GRAY);",
+              "        break;",
+              "    }",
+          ]
+          game, count = re.subn(
+              title_pattern,
+              "\n".join(title_lines),
+              game,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("ERROR: Could not patch TITLE menu.")
+
+          extra_cases = """    case PAUSE:
+              waitForVBlank();
+              drawRectDMA(56, 54, 132, 48, COL_BLACK);
+              drawCenteredString(66, 54, 132, 8, "PAUSED", COL_WHITE);
+              drawCenteredString(84, 54, 132, 8, "START - RESUME", COL_WHITE);
+              break;
+
+          case SCORES: {
+              if (key_hit(BUTTON_A) || key_hit(BUTTON_B)) {
+                  state = TITLE;
+                  break;
+              }
+
+              waitForVBlank();
+              fillScreenDMA(COL_BLACK);
+              drawCenteredString(22, 0, 240, 8, "SANDTRIS: MIYOO EDITION", COL_WHITE);
+              drawCenteredString(40, 0, 240, 8, "HIGH SCORES", COL_YELLOW);
+
+              char hsLine[24];
+              for (int rank = 0; rank < 4; rank++) {
+                  snprintf(hsLine, sizeof(hsLine), "%d. %d", rank + 1, highscores[rank]);
+                  drawCenteredString(64 + rank * 16, 0, 240, 8, hsLine, COL_WHITE);
+              }
+
+              drawCenteredString(138, 0, 240, 8, "A/B/START - BACK", COL_GRAY);
+              break;
+          }
+
+          """
+          game, count = re.subn(
+              r"(\s*case GAMEOVER:)",
+              "\n" + extra_cases + r"\1",
+              game,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("ERROR: Could not add PAUSE/SCORES cases.")
+
+          gameover_pattern = (
+              r"    case GAMEOVER:\s*\n"
+              r"\s*stop_music\(\);\s*\n"
+              r"\s*for \(unsigned int i = 0; i < sizeof\(highscores\) / sizeof\(int\); i\+\+\) \{\s*\n"
+              r"\s*if \(score < highscores\[i\]\)\s*\n"
+              r"\s*continue;\s*\n"
+              r"\s*int tmp = highscores\[i\];\s*\n"
+              r"\s*highscores\[i\] = score;\s*\n"
+              r"\s*score = tmp;\s*\n"
+              r"\s*\}\s*\n"
+              r"\s*\n"
+              r"\s*if \(key_hit\(BUTTON_START\)\)\s*\n"
+              r"\s*state = START;\s*\n"
+              r"\s*\n"
+              r"\s*break;"
+          )
+          gameover_lines = [
+              "    case GAMEOVER: {",
+              "        if (!gameOverHandled) {",
+              "            stop_music();",
+              "            recordHighScore(score);",
+              "            gameOverHandled = 1;",
+              "        }",
+              "",
+              "        if (key_hit(BUTTON_A)) {",
+              "            state = START;",
+              "            break;",
+              "        }",
+              "        if (key_hit(BUTTON_B)) {",
+              "            state = TITLE;",
+              "            break;",
+              "        }",
+              "",
+              "        waitForVBlank();",
+              "        drawRectDMA(42, 44, 152, 78, COL_BLACK);",
+              "        drawCenteredString(50, 44, 152, 8, \"GAME OVER\", COL_WHITE);",
+              "        char finalLine[24];",
+              "        snprintf(finalLine, sizeof(finalLine), \"SCORE: %d\", score);",
+              "        drawCenteredString(68, 44, 152, 8, finalLine, COL_YELLOW);",
+              "        snprintf(finalLine, sizeof(finalLine), \"BEST: %d\", highscores[0]);",
+              "        drawCenteredString(82, 44, 152, 8, finalLine, COL_WHITE);",
+              "        drawCenteredString(102, 44, 152, 8, \"A - PLAY AGAIN\", COL_WHITE);",
+              "        drawCenteredString(114, 44, 152, 8, \"B - MAIN MENU\", COL_WHITE);",
+              "        break;",
+              "    }",
+          ]
+          game, count = re.subn(
+              gameover_pattern,
+              "\n".join(gameover_lines),
+              game,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("ERROR: Could not patch GAMEOVER state.")
 
           game_path.write_text(game)
           header_path.write_text(header)
-          print("Applied Sandtris: Miyoo Edition v0.1")
+          print("Applied Sandtris: Miyoo Edition v0.2")
           PY
 
       - name: Allow large embedded audio string
         run: |
           sed -i 's/-Werror=vla/-Werror=vla -Wno-error=overlength-strings/' Makefile
 
-      - name: Verify Miyoo Edition patch
+      - name: Verify Miyoo Edition v0.2 patch
         run: |
-          grep -n "MIYOO EDITION" game.c
+          grep -n "MIYOO EDITION v0.2" game.c
+          grep -n "SRAM_V113" game.c
+          grep -n "recordHighScore" game.c
           grep -n "case PAUSE" game.c
-          grep -n "musicEnabled" game.c
-          grep -n "pausedState" game.c
+          grep -n "case SCORES" game.c
+          grep -n "DIFFICULTY" game.c
           grep -n "PAUSE" game.h
+          grep -n "SCORES" game.h
           grep -n "typeA_loopBlocks" assets/typeA.h
 
       - name: Build ROM
@@ -252,13 +454,13 @@ jobs:
       - name: Rename and verify ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.1.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.1.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.1.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.2.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.2.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.2.gba"
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-Edition-v0.1-FIX3
-          path: "Sandtris - Miyoo Edition v0.1.gba"
+          name: Sandtris-Miyoo-Edition-v0.2
+          path: "Sandtris - Miyoo Edition v0.2.gba"
           if-no-files-found: error
