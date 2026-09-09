@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.3.7 Flicker Fix + Circular Black Hole
+name: Build Sandtris Miyoo Edition v0.3.7 FIX2 Flicker Fix + Circular Black Hole
 
 on:
   push:
@@ -639,7 +639,7 @@ jobs:
           python3 /tmp/v036_stage3.py
 
 
-      - name: Apply v0.3.7 falling-piece flicker fix and circular inward Black Hole
+      - name: Apply v0.3.7 FIX2 falling-piece flicker fix and circular inward Black Hole
         shell: bash
         run: |
           python3 - <<'PY'
@@ -650,32 +650,50 @@ jobs:
           s = p.read_text()
 
           def function_span(src, name):
-              m = re.search(r'(?m)^(?:static\\s+)?void\\s+' + re.escape(name) + r'\\s*\\(void\\)\\s*\\{', src)
-              if not m:
-                  raise SystemExit(f"ERROR: {name}() not found.")
-              brace = src.find('{', m.start())
-              depth = 0
-              for i in range(brace, len(src)):
-                  if src[i] == '{': depth += 1
-                  elif src[i] == '}':
-                      depth -= 1
-                      if depth == 0: return m.start(), i + 1
-              raise SystemExit(f"ERROR: unterminated {name}().")
+              # Deliberately locate by the function-name token instead of assuming an exact
+              # declaration format. Earlier patches can change qualifiers/spacing.
+              for m in re.finditer(r'\b' + re.escape(name) + r'\s*\(', src):
+                  line_start = src.rfind('\n', 0, m.start()) + 1
+                  prefix = src[line_start:m.start()]
+                  if 'void' not in prefix:
+                      continue
+                  brace = src.find('{', m.end())
+                  if brace < 0:
+                      continue
+                  # Ensure this is a definition, not a prototype.
+                  semi = src.find(';', m.end(), brace + 1)
+                  if semi != -1:
+                      continue
+                  depth = 0
+                  for i in range(brace, len(src)):
+                      if src[i] == '{':
+                          depth += 1
+                      elif src[i] == '}':
+                          depth -= 1
+                          if depth == 0:
+                              return line_start, i + 1
+              raise SystemExit(f"ERROR: {name}() definition not found.")
 
-          # Restore original tight board->piece timing to eliminate falling-piece blink.
-          a, b = function_span(s, 'drawBoard')
-          block = s[a:b]
-          if 'drawDynamicSpaceTick();' not in block:
-              raise SystemExit('ERROR: expected drawDynamicSpaceTick() inside drawBoard().')
-          block = block.replace('    drawDynamicSpaceTick();\\n', '', 1)
-          s = s[:a] + block + s[b:]
+          # Remove only the Stage-1 dynamic-space hook from drawBoard. Stage 2's
+          # milestone hook remains in place. This avoids depending on drawBoard's
+          # declaration formatting.
+          hook = '    drawDynamicSpaceTick();\n'
+          hook_pos = s.find(hook)
+          if hook_pos < 0:
+              raise SystemExit('ERROR: dynamic-space drawBoard hook not found.')
+          # Confirm the hook occurs before drawMilestoneEffect(), which is the known
+          # Stage-2 drawBoard layout, then remove exactly that one call.
+          milestone_pos = s.find('    drawMilestoneEffect();', hook_pos)
+          if milestone_pos < 0 or milestone_pos - hook_pos > 200:
+              raise SystemExit('ERROR: dynamic hook was not paired with Stage-2 milestone hook.')
+          s = s[:hook_pos] + s[hook_pos + len(hook):]
 
           # Run the tiny left-margin animation only after the piece has already been drawn.
           a, b = function_span(s, 'drawPiece')
           block = s[a:b]
           if 'drawDynamicSpaceTick();' not in block:
               close = block.rfind('}')
-              block = block[:close].rstrip() + '\\n    drawDynamicSpaceTick();\\n' + block[close:]
+              block = block[:close].rstrip() + '\n    drawDynamicSpaceTick();\n' + block[close:]
               s = s[:a] + block + s[b:]
 
           black_hole = r'''static void drawBlackHoleVisualizer(void) {
@@ -785,7 +803,7 @@ jobs:
               raise SystemExit('ERROR: circular inward Black Hole patch missing.')
 
           p.write_text(s)
-          print('Applied v0.3.7 flicker fix + circular inward Black Hole')
+          print('Applied v0.3.7 FIX2 flicker fix + circular inward Black Hole')
           PY
 
       - name: Verify v0.3.7 render polish
