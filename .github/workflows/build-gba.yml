@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.3.4 Hourglass Visualizer
+name: Build Sandtris Miyoo Edition v0.3.4 Hourglass Visualizer FIX1
 
 on:
   push:
@@ -530,7 +530,7 @@ jobs:
           grep -n "visualizerAudioLevel" game.c
           grep -n "case VISUALIZER" game.c
           grep -n "VISUALIZER" game.h
-          grep -n "MIYOO EDITION v0.3.3" game.c
+          grep -n "MIYOO EDITION v0.3.4" game.c
           grep -q 'const int neckY = 83' game.c
           grep -q 'int streamHalf = 1 + level / 9' game.c
           grep -q 'MIYOO EDITION v0.3.4' game.c
@@ -548,7 +548,7 @@ jobs:
           grep -n "ELEMENTS: %s" game.c
           grep -n "SRAM8\[22\]" game.c
           grep -n "difficulty != 2 || !elementsEnabled" game.c
-          grep -n "MIYOO EDITION v0.3.3" game.c
+          grep -n "MIYOO EDITION v0.3.4" game.c
 
       - name: Verify Hard Mode Element System
         run: |
