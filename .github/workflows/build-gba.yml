@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.3.3 Music Visualizer
+name: Build Sandtris Miyoo Edition v0.3.3 Music Visualizer FIX1
 
 on:
   push:
@@ -540,7 +540,7 @@ jobs:
           grep -n "ELEMENTS: %s" game.c
           grep -n "SRAM8\[22\]" game.c
           grep -n "difficulty != 2 || !elementsEnabled" game.c
-          grep -n "MIYOO EDITION v0.3.1" game.c
+          grep -n "MIYOO EDITION v0.3.3" game.c
 
       - name: Verify Hard Mode Element System
         run: |
@@ -557,7 +557,7 @@ jobs:
 
       - name: Verify v0.3.1 patch
         run: |
-          grep -n "MIYOO EDITION v0.3.1" game.c
+          grep -n "MIYOO EDITION v0.3.3" game.c
           grep -n "SRAM_V113" game.c
           grep -n "restoreTitleStrip" game.c
           grep -n "drawShadowString" game.c
