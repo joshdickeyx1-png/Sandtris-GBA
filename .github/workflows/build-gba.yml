@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.3.5 FIX1 Dual Visualizers
+name: Build Sandtris Miyoo Edition v0.3.5 FIX2 Dual Visualizers
 
 on:
   push:
@@ -530,16 +530,16 @@ jobs:
           python3 /tmp/v035_galaxy.py
 
 
-      - name: Apply v0.3.5 FIX1 Visualizer Text Flicker Fix
+      - name: Apply v0.3.5 FIX2 Visualizer Text Flicker Fix
         run: |
-          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgnZ2FtZS5jJykKcz1wLnJlYWRfdGV4dCgpCgojIERyYXcgYWxsIHZpc3VhbGl6ZXIgbGFiZWxzIGludG8gdGhlIEVXUkFNIGJhY2tidWZmZXIgYmVmb3JlIHRoZSBWQmxhbmsgRE1BLgojIGdiYS5jJ3MgZm9udCByb3V0aW5lcyB0YXJnZXQgdGhlIGdsb2JhbCB2aWRlb0J1ZmZlciBwb2ludGVyLCBzbyB0ZW1wb3JhcmlseQojIHJlZGlyZWN0aW5nIGl0IHRvIHZpc3VhbGl6ZXJCdWZmZXIgbWFrZXMgdGhlIGxhYmVscyBwYXJ0IG9mIHRoZSBjb21wbGV0ZWQgZnJhbWUuCgpkZWYgbW92ZV90ZXh0X2ludG9fYnVmZmVyKHMsIGZ1bmN0aW9uX25hbWUsIHRleHRfY2FsbHMpOgogICAgc3RhcnQgPSBzLmZpbmQoJ3N0YXRpYyB2b2lkICcgKyBmdW5jdGlvbl9uYW1lICsgJyh2b2lkKSB7JykKICAgIGlmIHN0YXJ0IDwgMDoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJXMgbm90IGZvdW5kLicgJSBmdW5jdGlvbl9uYW1lKQogICAgbmV4dGZuID0gcy5maW5kKCdcbnN0YXRpYyAnLCBzdGFydCArIDEpCiAgICBpZiBuZXh0Zm4gPCAwOgogICAgICAgIG5leHRmbiA9IGxlbihzKQogICAgYmxvY2sgPSBzW3N0YXJ0Om5leHRmbl0KICAgIG9sZCA9ICcgICAgd2FpdEZvclZCbGFuaygpO1xuICAgIGRyYXdGdWxsU2NyZWVuSW1hZ2VETUEodmlzdWFsaXplckJ1ZmZlcik7XG4nICsgJycuam9pbignICAgICcgKyBjICsgJ1xuJyBmb3IgYyBpbiB0ZXh0X2NhbGxzKQogICAgbmV3ID0gKCcgICAgdm9sYXRpbGUgdW5zaWduZWQgc2hvcnQgKnNhdmVkVmlkZW9CdWZmZXIgPSB2aWRlb0J1ZmZlcjtcbicKICAgICAgICAgICAnICAgIHZpZGVvQnVmZmVyID0gdmlzdWFsaXplckJ1ZmZlcjtcbicgKwogICAgICAgICAgICcnLmpvaW4oJyAgICAnICsgYyArICdcbicgZm9yIGMgaW4gdGV4dF9jYWxscykgKwogICAgICAgICAgICcgICAgdmlkZW9CdWZmZXIgPSBzYXZlZFZpZGVvQnVmZmVyO1xuXG4nCiAgICAgICAgICAgJyAgICB3YWl0Rm9yVkJsYW5rKCk7XG4nCiAgICAgICAgICAgJyAgICBkcmF3RnVsbFNjcmVlbkltYWdlRE1BKHZpc3VhbGl6ZXJCdWZmZXIpO1xuJykKICAgIGlmIG9sZCBub3QgaW4gYmxvY2s6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IGV4cGVjdGVkIHRleHQgdGFpbCBub3QgZm91bmQgaW4gJXMuJyAlIGZ1bmN0aW9uX25hbWUpCiAgICBibG9jayA9IGJsb2NrLnJlcGxhY2Uob2xkLCBuZXcsIDEpCiAgICByZXR1cm4gc1s6c3RhcnRdICsgYmxvY2sgKyBzW25leHRmbjpdCgpzID0gbW92ZV90ZXh0X2ludG9fYnVmZmVyKHMsICdkcmF3VmlzdWFsaXplclNlbGVjdCcsIFsKICAgICdkcmF3Q2VudGVyZWRTaGFkb3dTdHJpbmcoMjQsIDIwLCAyMDAsIDgsICJDSE9PU0UgVklTVUFMSVpFUiIsIENPTF9ZRUxMT1cpOycsCiAgICAnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDYyLCAzNCwgMTcyLCA4LCB2aXN1YWxpemVyTW9kZSA9PSAwID8gIj4gSE9VUkdMQVNTIiA6ICIgIEhPVVJHTEFTUyIsIHZpc3VhbGl6ZXJNb2RlID09IDAgPyBDT0xfWUVMTE9XIDogQ09MX1dISVRFKTsnLAogICAgJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg4NiwgMzQsIDE3MiwgOCwgdmlzdWFsaXplck1vZGUgPT0gMSA/ICI+IFNBTkQgR0FMQVhZIiA6ICIgIFNBTkQgR0FMQVhZIiwgdmlzdWFsaXplck1vZGUgPT0gMSA/IENPTF9ZRUxMT1cgOiBDT0xfV0hJVEUpOycsCiAgICAnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDEyMiwgMjAsIDIwMCwgOCwgIlVQL0RPV04gKyBBIiwgQ09MX1dISVRFKTsnLAogICAgJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZygxNDIsIDIwLCAyMDAsIDgsICJCIC0gQkFDSyIsIENPTF9XSElURSk7JywKXSkKCnMgPSBtb3ZlX3RleHRfaW50b19idWZmZXIocywgJ2RyYXdIb3VyZ2xhc3NWaXN1YWxpemVyJywgWwogICAgJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg3LCAyMCwgMjAwLCA4LCAiTVVTSUMgVklTVUFMSVpFUiIsIENPTF9ZRUxMT1cpOycsCiAgICAnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDE0NywgMjAsIDIwMCwgOCwgIkIgLSBCQUNLIiwgQ09MX1dISVRFKTsnLApdKQoKcyA9IG1vdmVfdGV4dF9pbnRvX2J1ZmZlcihzLCAnZHJhd0dhbGF4eVZpc3VhbGl6ZXInLCBbCiAgICAnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDcsIDIwLCAyMDAsIDgsICJTQU5EIEdBTEFYWSIsIENPTF9ZRUxMT1cpOycsCiAgICAnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDE0NywgMjAsIDIwMCwgOCwgIkIgLSBDSE9PU0UgIFNUQVJUIC0gTUVOVSIsIENPTF9XSElURSk7JywKXSkKCnM9cy5yZXBsYWNlKCdNSVlPTyBFRElUSU9OIHYwLjMuNScsJ01JWU9PIEVESVRJT04gdjAuMy41IEZJWDEnKQpwLndyaXRlX3RleHQocykKcHJpbnQoJ0FwcGxpZWQgdjAuMy41IEZJWDEgdmlzdWFsaXplciB0ZXh0IGJhY2tidWZmZXIgcGF0Y2gnKQo=' | base64 -d > /tmp/v035_fix1_text.py
-          python3 /tmp/v035_fix1_text.py
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnAgPSBQYXRoKCdnYW1lLmMnKQpzID0gcC5yZWFkX3RleHQoKQoKIyBNb3ZlIGVhY2ggdmlzdWFsaXplcidzIGFscmVhZHktZ2VuZXJhdGVkIHRleHQgdGFpbCBpbnRvIHRoZSBFV1JBTSBiYWNrYnVmZmVyCiMgYmVmb3JlIHRoZSBWQmxhbmsgRE1BLiBUaGlzIHBhcnNlciB1c2VzIGJhbGFuY2VkIGJyYWNlcyBzbyBtdWx0aWxpbmUgY2FsbHMKIyBhcmUgaGFuZGxlZCBzYWZlbHkuCmRlZiBwYXRjaF9mdW5jdGlvbihzcmMsIG5hbWUpOgogICAgc2lnID0gJ3N0YXRpYyB2b2lkICcgKyBuYW1lICsgJyh2b2lkKSB7JwogICAgc3RhcnQgPSBzcmMuZmluZChzaWcpCiAgICBpZiBzdGFydCA8IDA6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6ICVzIG5vdCBmb3VuZC4nICUgbmFtZSkKICAgIGJyYWNlID0gc3JjLmZpbmQoJ3snLCBzdGFydCkKICAgIGRlcHRoID0gMAogICAgZW5kID0gLTEKICAgIGZvciBpIGluIHJhbmdlKGJyYWNlLCBsZW4oc3JjKSk6CiAgICAgICAgY2ggPSBzcmNbaV0KICAgICAgICBpZiBjaCA9PSAneyc6CiAgICAgICAgICAgIGRlcHRoICs9IDEKICAgICAgICBlbGlmIGNoID09ICd9JzoKICAgICAgICAgICAgZGVwdGggLT0gMQogICAgICAgICAgICBpZiBkZXB0aCA9PSAwOgogICAgICAgICAgICAgICAgZW5kID0gaSArIDEKICAgICAgICAgICAgICAgIGJyZWFrCiAgICBpZiBlbmQgPCAwOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiB1bnRlcm1pbmF0ZWQgJXMuJyAlIG5hbWUpCgogICAgYmxvY2sgPSBzcmNbc3RhcnQ6ZW5kXQogICAgbWFya2VyID0gJyAgICB3YWl0Rm9yVkJsYW5rKCk7XG4gICAgZHJhd0Z1bGxTY3JlZW5JbWFnZURNQSh2aXN1YWxpemVyQnVmZmVyKTtcbicKICAgIHBvcyA9IGJsb2NrLmZpbmQobWFya2VyKQogICAgaWYgcG9zIDwgMDoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogVkJsYW5rIERNQSB0YWlsIG5vdCBmb3VuZCBpbiAlcy4nICUgbmFtZSkKCiAgICBiZWZvcmUgPSBibG9ja1s6cG9zXQogICAgYWZ0ZXIgPSBibG9ja1twb3MgKyBsZW4obWFya2VyKTpdCiAgICAjIEV2ZXJ5dGhpbmcgYWZ0ZXIgdGhlIGZpbmFsIERNQSBpbiB0aGVzZSB2aXN1YWxpemVyIGRyYXcgZnVuY3Rpb25zIGlzIFVJIHRleHQuCiAgICBjbG9zZSA9IGFmdGVyLnJmaW5kKCd9JykKICAgIGlmIGNsb3NlIDwgMDoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogY2xvc2luZyBicmFjZSBub3QgZm91bmQgaW4gJXMuJyAlIG5hbWUpCiAgICB0ZXh0X3RhaWwgPSBhZnRlcls6Y2xvc2VdLnN0cmlwKCdcbicpCiAgICBpZiBub3QgdGV4dF90YWlsLnN0cmlwKCk6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IG5vIHRleHQgdGFpbCBmb3VuZCBpbiAlcy4nICUgbmFtZSkKCiAgICBtb3ZlZCA9ICgKICAgICAgICAnICAgIHZvbGF0aWxlIHVuc2lnbmVkIHNob3J0ICpzYXZlZFZpZGVvQnVmZmVyID0gdmlkZW9CdWZmZXI7XG4nCiAgICAgICAgJyAgICB2aWRlb0J1ZmZlciA9IHZpc3VhbGl6ZXJCdWZmZXI7XG4nICsKICAgICAgICB0ZXh0X3RhaWwgKyAnXG4nICsKICAgICAgICAnICAgIHZpZGVvQnVmZmVyID0gc2F2ZWRWaWRlb0J1ZmZlcjtcblxuJwogICAgICAgICcgICAgd2FpdEZvclZCbGFuaygpO1xuJwogICAgICAgICcgICAgZHJhd0Z1bGxTY3JlZW5JbWFnZURNQSh2aXN1YWxpemVyQnVmZmVyKTtcbicKICAgICkKICAgIG5ld2Jsb2NrID0gYmVmb3JlICsgbW92ZWQgKyAnfScKICAgIHJldHVybiBzcmNbOnN0YXJ0XSArIG5ld2Jsb2NrICsgc3JjW2VuZDpdCgpmb3IgZm4gaW4gKCdkcmF3VmlzdWFsaXplclNlbGVjdCcsICdkcmF3SG91cmdsYXNzVmlzdWFsaXplcicsICdkcmF3R2FsYXh5VmlzdWFsaXplcicpOgogICAgcyA9IHBhdGNoX2Z1bmN0aW9uKHMsIGZuKQoKcyA9IHMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC4zLjUgRklYMScsICdNSVlPTyBFRElUSU9OIHYwLjMuNSBGSVgyJykKcyA9IHMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC4zLjUnLCAnTUlZT08gRURJVElPTiB2MC4zLjUgRklYMicpCnAud3JpdGVfdGV4dChzKQpwcmludCgnQXBwbGllZCB2MC4zLjUgRklYMiB2aXN1YWxpemVyIHRleHQgYmFja2J1ZmZlciBwYXRjaCcpCg==' | base64 -d > /tmp/v035_fix2_text.py
+          python3 /tmp/v035_fix2_text.py
 
-      - name: Verify v0.3.5 FIX1 Visualizer Text Fix
+      - name: Verify v0.3.5 FIX2 Visualizer Text Fix
         run: |
           grep -n "savedVideoBuffer = videoBuffer" game.c
           test "$(grep -c 'savedVideoBuffer = videoBuffer' game.c)" -eq 3
-          grep -n "MIYOO EDITION v0.3.5 FIX1" game.c
+          grep -n "MIYOO EDITION v0.3.5 FIX2" game.c
 
       - name: Verify v0.3.5 Second Visualizer
         run: |
@@ -548,7 +548,7 @@ jobs:
           grep -n "drawVisualizerSelect" game.c
           grep -n "SAND GALAXY" game.c
           grep -n "visualizerChoosing" game.c
-          grep -n "MIYOO EDITION v0.3.5 FIX1" game.c
+          grep -n "MIYOO EDITION v0.3.5 FIX2" game.c
 
       - name: Verify v0.3.5 Hourglass Foundation
         run: |
@@ -556,10 +556,10 @@ jobs:
           grep -n "visualizerAudioLevel" game.c
           grep -n "case VISUALIZER" game.c
           grep -n "VISUALIZER" game.h
-          grep -n "MIYOO EDITION v0.3.5 FIX1" game.c
+          grep -n "MIYOO EDITION v0.3.5 FIX2" game.c
           grep -q 'const int neckY = 83' game.c
           grep -q 'int streamHalf = 1 + level / 9' game.c
-          grep -q 'MIYOO EDITION v0.3.5 FIX1' game.c
+          grep -q 'MIYOO EDITION v0.3.5 FIX2' game.c
 
       - name: Verify v0.3.2 space background
         run: |
@@ -574,7 +574,7 @@ jobs:
           grep -n "ELEMENTS: %s" game.c
           grep -n "SRAM8\[22\]" game.c
           grep -n "difficulty != 2 || !elementsEnabled" game.c
-          grep -n "MIYOO EDITION v0.3.5 FIX1" game.c
+          grep -n "MIYOO EDITION v0.3.5 FIX2" game.c
 
       - name: Verify Hard Mode Element System
         run: |
@@ -591,7 +591,7 @@ jobs:
 
       - name: Verify v0.3.5 final patch
         run: |
-          grep -n "MIYOO EDITION v0.3.5 FIX1" game.c
+          grep -n "MIYOO EDITION v0.3.5 FIX2" game.c
           grep -n "SRAM_V113" game.c
           grep -n "restoreTitleStrip" game.c
           grep -n "drawShadowString" game.c
@@ -611,13 +611,13 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.3.5 FIX1 Dual Visualizers.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.3.5 FIX1 Dual Visualizers.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.3.5 FIX1 Dual Visualizers.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.3.5 FIX2 Dual Visualizers.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.3.5 FIX2 Dual Visualizers.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.3.5 FIX2 Dual Visualizers.gba"
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.3.5-FIX1-Dual-Visualizers
-          path: "Sandtris - Miyoo Edition v0.3.5 FIX1 Dual Visualizers.gba"
+          name: Sandtris-Miyoo-v0.3.5-FIX2-Dual-Visualizers
+          path: "Sandtris - Miyoo Edition v0.3.5 FIX2 Dual Visualizers.gba"
           if-no-files-found: error
