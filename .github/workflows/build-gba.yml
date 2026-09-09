@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.3.6 Stage 3 Cosmic Mode
+name: Build Sandtris Miyoo Edition v0.3.7 Flicker Fix + Circular Black Hole
 
 on:
   push:
@@ -638,6 +638,162 @@ jobs:
           echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQoKcCA9IFBhdGgoJ2dhbWUuYycpCnMgPSBwLnJlYWRfdGV4dCgpCgojIEhlbHBlcnMgZm9yIHJvYnVzdCB3aG9sZS1mdW5jdGlvbiByZXBsYWNlbWVudC4KZGVmIHJlcGxhY2VfZnVuY3Rpb24oc3JjLCBuYW1lLCByZXBsYWNlbWVudCk6CiAgICBzaWcgPSBmJ3N0YXRpYyB2b2lkIHtuYW1lfSh2b2lkKSB7eycKICAgIHN0YXJ0ID0gc3JjLmZpbmQoc2lnKQogICAgaWYgc3RhcnQgPCAwOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoZidFUlJPUjoge25hbWV9KCkgbm90IGZvdW5kLicpCiAgICBicmFjZSA9IHNyYy5maW5kKCd7Jywgc3RhcnQpCiAgICBkZXB0aCA9IDAKICAgIGVuZCA9IC0xCiAgICBmb3IgaSBpbiByYW5nZShicmFjZSwgbGVuKHNyYykpOgogICAgICAgIGlmIHNyY1tpXSA9PSAneyc6CiAgICAgICAgICAgIGRlcHRoICs9IDEKICAgICAgICBlbGlmIHNyY1tpXSA9PSAnfSc6CiAgICAgICAgICAgIGRlcHRoIC09IDEKICAgICAgICAgICAgaWYgZGVwdGggPT0gMDoKICAgICAgICAgICAgICAgIGVuZCA9IGkgKyAxCiAgICAgICAgICAgICAgICBicmVhawogICAgaWYgZW5kIDwgMDoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KGYnRVJST1I6IHVudGVybWluYXRlZCB7bmFtZX0oKS4nKQogICAgcmV0dXJuIHNyY1s6c3RhcnRdICsgcmVwbGFjZW1lbnQgKyBzcmNbZW5kOl0KCiMgMSkgUGVyc2lzdGVudCBDb3NtaWMgTW9kZSBzZXR0aW5nLiBTUkFNIGJ5dGUgMjMgaXMgdW51c2VkIGJ5IHRoZSBleGlzdGluZyBzYXZlIGxheW91dC4KYW5jaG9yID0gJ3N0YXRpYyB1MzIgc3BhY2VBbmltRnJhbWUgPSAwO1xuJwppZiBhbmNob3Igbm90IGluIHM6CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogU3RhZ2UgMSBzcGFjZUFuaW1GcmFtZSBnbG9iYWwgbm90IGZvdW5kLicpCmlmICdzdGF0aWMgaW50IGNvc21pY0VuYWJsZWQgPSAwOycgbm90IGluIHM6CiAgICBzID0gcy5yZXBsYWNlKGFuY2hvciwgYW5jaG9yICsgJ3N0YXRpYyBpbnQgY29zbWljRW5hYmxlZCA9IDA7XG4nLCAxKQoKc2F2ZV9hbmNob3IgPSAnICAgIFNSQU04WzIyXSA9ICh1OCkoZWxlbWVudHNFbmFibGVkID8gMSA6IDApOycKaWYgc2F2ZV9hbmNob3Igbm90IGluIHM6CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogZWxlbWVudHMgU1JBTSBzYXZlIGFuY2hvciBub3QgZm91bmQuJykKcyA9IHMucmVwbGFjZShzYXZlX2FuY2hvciwgc2F2ZV9hbmNob3IgKyAnXG4gICAgU1JBTThbMjNdID0gKHU4KShjb3NtaWNFbmFibGVkID8gMSA6IDApOycsIDEpCgpsb2FkX2FuY2hvciA9ICcgICAgICAgIGVsZW1lbnRzRW5hYmxlZCA9IFNSQU04WzIyXSA8PSAxID8gU1JBTThbMjJdIDogMTsnCmlmIGxvYWRfYW5jaG9yIG5vdCBpbiBzOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IGVsZW1lbnRzIFNSQU0gbG9hZCBhbmNob3Igbm90IGZvdW5kLicpCnMgPSBzLnJlcGxhY2UobG9hZF9hbmNob3IsIGxvYWRfYW5jaG9yICsgJ1xuICAgICAgICBjb3NtaWNFbmFibGVkID0gU1JBTThbMjNdIDw9IDEgPyBTUkFNOFsyM10gOiAwOycsIDEpCgpkZWZhdWx0X2FuY2hvciA9ICcgICAgICAgIGVsZW1lbnRzRW5hYmxlZCA9IDE7JwppZiBkZWZhdWx0X2FuY2hvciBub3QgaW4gczoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBlbGVtZW50cyBkZWZhdWx0IGFuY2hvciBub3QgZm91bmQuJykKcyA9IHMucmVwbGFjZShkZWZhdWx0X2FuY2hvciwgZGVmYXVsdF9hbmNob3IgKyAnXG4gICAgICAgIGNvc21pY0VuYWJsZWQgPSAwOycsIDEpCgojIDIpIFNldmVuLWl0ZW0gdGl0bGUgbWVudTogQ29zbWljIE1vZGUgaXMgYSB2aXN1YWwtb25seSB0b2dnbGUuCm1lbnUgPSByJycnc3RhdGljIHZvaWQgZHJhd1RpdGxlTWVudSh2b2lkKSB7CiAgICB3YWl0Rm9yVkJsYW5rKCk7CiAgICBpZiAoIXRpdGxlQmFja2dyb3VuZERyYXduKSB7CiAgICAgICAgZHJhd0Z1bGxTY3JlZW5JbWFnZURNQSh0aXRsZSk7CiAgICAgICAgdGl0bGVCYWNrZ3JvdW5kRHJhd24gPSAxOwogICAgICAgIGRyYXdDZW50ZXJlZFNoYWRvd1N0cmluZygzNSwgMzgsIDE2NCwgOCwgIk1JWU9PIEVESVRJT04gdjAuMy42IiwgQ09MX1dISVRFKTsKICAgIH0KCiAgICByZXN0b3JlVGl0bGVTdHJpcCg0NywgNDYsIDE3NiwgMTMpOwogICAgcmVzdG9yZVRpdGxlU3RyaXAoNjIsIDQ2LCAxNzYsIDEzKTsKICAgIHJlc3RvcmVUaXRsZVN0cmlwKDc3LCA0NiwgMTc2LCAxMyk7CiAgICByZXN0b3JlVGl0bGVTdHJpcCg5MiwgNDYsIDE3NiwgMTMpOwogICAgcmVzdG9yZVRpdGxlU3RyaXAoMTA3LCA0NiwgMTc2LCAxMyk7CiAgICByZXN0b3JlVGl0bGVTdHJpcCgxMjIsIDQ2LCAxNzYsIDEzKTsKICAgIHJlc3RvcmVUaXRsZVN0cmlwKDEzNywgNDYsIDE3NiwgMTMpOwoKICAgIGNoYXIgbGluZVszNF07CiAgICBzbnByaW50ZihsaW5lLCBzaXplb2YobGluZSksICIlYyBTVEFSVCBHQU1FIiwgbWVudVNlbGVjdGlvbiA9PSAwID8gJz4nIDogJyAnKTsKICAgIGRyYXdTaGFkb3dTdHJpbmcoNTAsIDUwLCBsaW5lLCBtZW51U2VsZWN0aW9uID09IDAgPyBDT0xfWUVMTE9XIDogQ09MX1dISVRFKTsKCiAgICBjaGFyICpkaWZmTmFtZSA9IGRpZmZpY3VsdHkgPT0gMCA/ICJFQVNZIiA6IChkaWZmaWN1bHR5ID09IDEgPyAiTk9STUFMIiA6ICJIQVJEIik7CiAgICBzbnByaW50ZihsaW5lLCBzaXplb2YobGluZSksICIlYyBESUZGSUNVTFRZOiAlcyIsIG1lbnVTZWxlY3Rpb24gPT0gMSA/ICc+JyA6ICcgJywgZGlmZk5hbWUpOwogICAgZHJhd1NoYWRvd1N0cmluZyg2NSwgNTAsIGxpbmUsIG1lbnVTZWxlY3Rpb24gPT0gMSA/IENPTF9ZRUxMT1cgOiBDT0xfV0hJVEUpOwoKICAgIHNucHJpbnRmKGxpbmUsIHNpemVvZihsaW5lKSwgIiVjIE1VU0lDOiAlcyIsIG1lbnVTZWxlY3Rpb24gPT0gMiA/ICc+JyA6ICcgJywgbXVzaWNFbmFibGVkID8gIk9OIiA6ICJPRkYiKTsKICAgIGRyYXdTaGFkb3dTdHJpbmcoODAsIDUwLCBsaW5lLCBtZW51U2VsZWN0aW9uID09IDIgPyBDT0xfWUVMTE9XIDogQ09MX1dISVRFKTsKCiAgICBzbnByaW50ZihsaW5lLCBzaXplb2YobGluZSksICIlYyBFTEVNRU5UUzogJXMiLCBtZW51U2VsZWN0aW9uID09IDMgPyAnPicgOiAnICcsIGVsZW1lbnRzRW5hYmxlZCA/ICJPTiIgOiAiT0ZGIik7CiAgICBkcmF3U2hhZG93U3RyaW5nKDk1LCA1MCwgbGluZSwgbWVudVNlbGVjdGlvbiA9PSAzID8gQ09MX1lFTExPVyA6IENPTF9XSElURSk7CgogICAgc25wcmludGYobGluZSwgc2l6ZW9mKGxpbmUpLCAiJWMgQ09TTUlDIE1PREU6ICVzIiwgbWVudVNlbGVjdGlvbiA9PSA0ID8gJz4nIDogJyAnLCBjb3NtaWNFbmFibGVkID8gIk9OIiA6ICJPRkYiKTsKICAgIGRyYXdTaGFkb3dTdHJpbmcoMTEwLCA1MCwgbGluZSwgbWVudVNlbGVjdGlvbiA9PSA0ID8gQ09MX1lFTExPVyA6IENPTF9XSElURSk7CgogICAgc25wcmludGYobGluZSwgc2l6ZW9mKGxpbmUpLCAiJWMgTVVTSUMgVklTVUFMSVpFUiIsIG1lbnVTZWxlY3Rpb24gPT0gNSA/ICc+JyA6ICcgJyk7CiAgICBkcmF3U2hhZG93U3RyaW5nKDEyNSwgNTAsIGxpbmUsIG1lbnVTZWxlY3Rpb24gPT0gNSA/IENPTF9ZRUxMT1cgOiBDT0xfV0hJVEUpOwoKICAgIHNucHJpbnRmKGxpbmUsIHNpemVvZihsaW5lKSwgIiVjIEhJR0ggU0NPUkVTIiwgbWVudVNlbGVjdGlvbiA9PSA2ID8gJz4nIDogJyAnKTsKICAgIGRyYXdTaGFkb3dTdHJpbmcoMTQwLCA1MCwgbGluZSwgbWVudVNlbGVjdGlvbiA9PSA2ID8gQ09MX1lFTExPVyA6IENPTF9XSElURSk7Cn0nJycKcyA9IHJlcGxhY2VfZnVuY3Rpb24ocywgJ2RyYXdUaXRsZU1lbnUnLCBtZW51KQoKIyBNZW51IG5hdmlnYXRpb24gNiAtPiA3IGNob2ljZXMuCnMsIG4xID0gcmUuc3VibihyJ21lbnVTZWxlY3Rpb24gPSBcKG1lbnVTZWxlY3Rpb24gXCsgNVwpICUgNjsnLCAnbWVudVNlbGVjdGlvbiA9IChtZW51U2VsZWN0aW9uICsgNikgJSA3OycsIHMsIGNvdW50PTEpCnMsIG4yID0gcmUuc3VibihyJ21lbnVTZWxlY3Rpb24gPSBcKG1lbnVTZWxlY3Rpb24gXCsgMVwpICUgNjsnLCAnbWVudVNlbGVjdGlvbiA9IChtZW51U2VsZWN0aW9uICsgMSkgJSA3OycsIHMsIGNvdW50PTEpCmlmIG4xICE9IDEgb3IgbjIgIT0gMToKICAgIHJhaXNlIFN5c3RlbUV4aXQoZidFUlJPUjogbWVudSBuYXZpZ2F0aW9uIHBhdGNoIGZhaWxlZCAodXA9e24xfSwgZG93bj17bjJ9KS4nKQoKIyBJbnNlcnQgQ29zbWljIE1vZGUgYnJhbmNoIGFoZWFkIG9mIHRoZSBleGlzdGluZyBNdXNpYyBWaXN1YWxpemVyIGJyYW5jaCwgYW5kIHNoaWZ0IGl0IHRvIHNsb3QgNS4KdmlzX3BhdCA9IHJlLmNvbXBpbGUocicnJyAgICAgICAgICAgIFx9IGVsc2UgaWYgXChtZW51U2VsZWN0aW9uID09IDRcKSBce1xuKC4qPykgICAgICAgICAgICBcfSBlbHNlIFx7XG4gICAgICAgICAgICAgICAgc3RhdGUgPSBTQ09SRVM7XG4gICAgICAgICAgICAgICAgc2NvcmVzRGlydHkgPSAxO1xuICAgICAgICAgICAgXH0nJycsIHJlLlMpCm0gPSB2aXNfcGF0LnNlYXJjaChzKQppZiBub3QgbToKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBmaW5hbCBtZW51IHZpc3VhbGl6ZXIvc2NvcmVzIGJyYW5jaCBub3QgZm91bmQuJykKdmlzdWFsaXplcl9ib2R5ID0gbS5ncm91cCgxKQpyZXBsYWNlbWVudCA9ICcnJyAgICAgICAgICAgIH0gZWxzZSBpZiAobWVudVNlbGVjdGlvbiA9PSA0KSB7CiAgICAgICAgICAgICAgICBjb3NtaWNFbmFibGVkID0gIWNvc21pY0VuYWJsZWQ7CiAgICAgICAgICAgICAgICBzYXZlRGF0YSgpOwogICAgICAgICAgICAgICAgdGl0bGVEaXJ0eSA9IDE7CiAgICAgICAgICAgIH0gZWxzZSBpZiAobWVudVNlbGVjdGlvbiA9PSA1KSB7CicnJyArIHZpc3VhbGl6ZXJfYm9keSArICcnJyAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICBzdGF0ZSA9IFNDT1JFUzsKICAgICAgICAgICAgICAgIHNjb3Jlc0RpcnR5ID0gMTsKICAgICAgICAgICAgfScnJwpzID0gc1s6bS5zdGFydCgpXSArIHJlcGxhY2VtZW50ICsgc1ttLmVuZCgpOl0KCiMgMykgQ29zbWljIE1vZGU6IHRoZSBsZWZ0LXNpZGUgdW5pdmVyc2UgZXZvbHZlcyB3aXRoIHNjb3JlIHdoaWxlIGdhbWVwbGF5IG1lY2hhbmljcyByZW1haW4gdW50b3VjaGVkLgpkeW5hbWljID0gcicnJ3N0YXRpYyB2b2lkIGRyYXdEeW5hbWljU3BhY2VUaWNrKHZvaWQpIHsKICAgIHN0YXRpYyBjb25zdCB1bnNpZ25lZCBjaGFyIHN4WzE0XSA9IHszLCA4LCAxMywgMTgsIDIzLCAyOSwgMzUsIDYsIDE2LCAyNiwgMzMsIDEwLCAyMSwgMzF9OwogICAgc3RhdGljIGNvbnN0IHVuc2lnbmVkIGNoYXIgc3lbMTRdID0gezksIDIyLCAzNiwgNTEsIDY4LCA4NCwgMTAxLCAxMTksIDEzNiwgMTQ5LCA0MSwgOTcsIDEyNiwgNjF9OwogICAgc3RhdGljIGNvbnN0IHVuc2lnbmVkIGNoYXIgbnhbMTJdID0gezUsIDksIDE0LCAxOCwgMjMsIDI4LCAzMiwgMTEsIDE3LCAyNSwgMzQsIDd9OwogICAgc3RhdGljIGNvbnN0IHVuc2lnbmVkIGNoYXIgbnlbMTJdID0gezQ3LCA1OCwgNjksIDc5LCA4OSwgOTksIDEwOSwgMTE2LCAxMjgsIDcyLCA5MywgMTA0fTsKCiAgICBzcGFjZUFuaW1GcmFtZSsrOwogICAgaWYgKChzcGFjZUFuaW1GcmFtZSAmIDN1KSAhPSAwdSkKICAgICAgICByZXR1cm47CgogICAgLy8gUmVmcmVzaCBvbmx5IHRoZSBrbm93bi1zYWZlIGxlZnQgc3BhY2UgbWFyZ2luLiBUaGlzIHByZXZlbnRzIHRyYWlscyB3aGVuIENvc21pYyBzdGFnZXMgY2hhbmdlLgogICAgZm9yIChpbnQgeSA9IDA7IHkgPCBIRUlHSFQ7IHkrKykKICAgICAgICBmb3IgKGludCB4ID0gMDsgeCA8IDM4OyB4KyspCiAgICAgICAgICAgIHZpZGVvQnVmZmVyW09GRlNFVCh5LCB4LCBXSURUSCldID0gYmdbT0ZGU0VUKHksIHgsIFdJRFRIKV07CgogICAgLy8gRHluYW1pYyBzdGFycyByZW1haW4gYWN0aXZlIHdoZXRoZXIgQ29zbWljIE1vZGUgaXMgb24gb3Igb2ZmLgogICAgZm9yIChpbnQgaSA9IDA7IGkgPCAxNDsgaSsrKSB7CiAgICAgICAgdTMyIHBoYXNlID0gKHNwYWNlQW5pbUZyYW1lID4+IDIpICsgKHUzMilpICogM3U7CiAgICAgICAgdTE2IGMgPSAoKHBoYXNlICYgN3UpID09IDB1KSA/IENPTF9XSElURSA6CiAgICAgICAgICAgICAgICAoKHBoYXNlICYgM3UpID09IDB1KSA/IDB4N0YxOCA6IDB4NDIxMDsKICAgICAgICBzZXRQaXhlbCgoaW50KXN5W2ldLCAoaW50KXN4W2ldLCBjKTsKICAgIH0KCiAgICBpbnQgdGllciA9IDA7CiAgICBpZiAoY29zbWljRW5hYmxlZCkgewogICAgICAgIGlmIChzY29yZSA+PSAxNTAwMCkgdGllciA9IDM7CiAgICAgICAgZWxzZSBpZiAoc2NvcmUgPj0gMTAwMDApIHRpZXIgPSAyOwogICAgICAgIGVsc2UgaWYgKHNjb3JlID49IDUwMDApIHRpZXIgPSAxOwogICAgfQoKICAgIC8vIEJhc2UgYnJlYXRoaW5nIG5lYnVsYS4gQ29zbWljIE1vZGUgcHJvZ3Jlc3NpdmVseSBpbnRlbnNpZmllcyBpdC4KICAgIGludCBuZWJ1bGFDb3VudCA9IGNvc21pY0VuYWJsZWQgPyAodGllciA9PSAwID8gOCA6ICh0aWVyID09IDEgPyAxMiA6IDEwKSkgOiAxMjsKICAgIGZvciAoaW50IGkgPSAwOyBpIDwgbmVidWxhQ291bnQ7IGkrKykgewogICAgICAgIHUzMiBwaGFzZSA9IChzcGFjZUFuaW1GcmFtZSA+PiAzKSArICh1MzIpaTsKICAgICAgICB1MTYgYzsKICAgICAgICBpZiAodGllciA9PSAxKQogICAgICAgICAgICBjID0gKHBoYXNlICYgMXUpID8gMHg1RDEyIDogMHgzMENDOwogICAgICAgIGVsc2UKICAgICAgICAgICAgYyA9IChwaGFzZSAmIDF1KSA/IDB4NDkxMCA6IDB4MzBDQzsKICAgICAgICBzZXRQaXhlbCgoaW50KW55W2ldLCAoaW50KW54W2ldLCBjKTsKICAgICAgICBpZiAoKGkgJSA0KSA9PSAwICYmIG54W2ldICsgMSA8IDM4KQogICAgICAgICAgICBzZXRQaXhlbCgoaW50KW55W2ldLCAoaW50KW54W2ldICsgMSwgYyk7CiAgICB9CgogICAgaWYgKCFjb3NtaWNFbmFibGVkKQogICAgICAgIHJldHVybjsKCiAgICBpZiAodGllciA9PSAxKSB7CiAgICAgICAgLy8gTkVCVUxBOiBkcmlmdGluZyB2aW9sZXQvYmx1ZSB3aXNwcyBhY3Jvc3MgdGhlIGxlZnQgbWFyZ2luLgogICAgICAgIGZvciAoaW50IGkgPSAwOyBpIDwgMjY7IGkrKykgewogICAgICAgICAgICB1MzIgdiA9ICh1MzIpaSAqIDI2NTQ0MzU3NjF1ICsgKHNwYWNlQW5pbUZyYW1lID4+IDMpICogOTd1OwogICAgICAgICAgICBpbnQgeCA9IDMgKyAoaW50KSgodiA+PiAxNikgJSAzMnUpOwogICAgICAgICAgICBpbnQgeSA9IDIwICsgKGludCkoKHYgPj4gOCkgJSAxMjB1KTsKICAgICAgICAgICAgaWYgKCgoaSArIChpbnQpKHNwYWNlQW5pbUZyYW1lID4+IDQpKSAmIDMpICE9IDApCiAgICAgICAgICAgICAgICBzZXRQaXhlbCh5LCB4LCAoaSAmIDEpID8gMHg1RDEyIDogMHgzOTEwKTsKICAgICAgICB9CiAgICB9IGVsc2UgaWYgKHRpZXIgPT0gMikgewogICAgICAgIC8vIFBMQU5FVEFSWSBTUEFDRTogYSBibHVlIGNyZXNjZW50IHBsYW5ldCByaXNlcyBmcm9tIHRoZSBsb3dlci1sZWZ0LgogICAgICAgIGNvbnN0IGludCBjeCA9IDE3LCBjeSA9IDEwNSwgciA9IDEzOwogICAgICAgIGZvciAoaW50IHl5ID0gLXI7IHl5IDw9IHI7IHl5KyspIHsKICAgICAgICAgICAgZm9yIChpbnQgeHggPSAtcjsgeHggPD0gcjsgeHgrKykgewogICAgICAgICAgICAgICAgaW50IGQgPSB4eCAqIHh4ICsgeXkgKiB5eTsKICAgICAgICAgICAgICAgIGlmIChkIDw9IHIgKiByICYmIGQgPj0gKHIgLSAyKSAqIChyIC0gMikpCiAgICAgICAgICAgICAgICAgICAgc2V0UGl4ZWwoY3kgKyB5eSwgY3ggKyB4eCwgeHggPCAzID8gMHg3RjE4IDogMHg0MjEwKTsKICAgICAgICAgICAgICAgIGVsc2UgaWYgKGQgPCAociAtIDIpICogKHIgLSAyKSAmJiB4eCA8IC0zICYmICgoeHggKyB5eSkgJiAyKSA9PSAwKQogICAgICAgICAgICAgICAgICAgIHNldFBpeGVsKGN5ICsgeXksIGN4ICsgeHgsIDB4MzBDQyk7CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICAgICAgZm9yIChpbnQgaSA9IDA7IGkgPCAxODsgaSsrKSB7CiAgICAgICAgICAgIGludCB4ID0gMiArICgoaSAqIDcgKyAoaW50KShzcGFjZUFuaW1GcmFtZSA+PiAzKSkgJSAzNSk7CiAgICAgICAgICAgIGludCB5ID0gMTggKyAoKGkgKiAxOSkgJSA3MCk7CiAgICAgICAgICAgIGlmICgoaSAmIDMpID09IDApIHNldFBpeGVsKHksIHgsIENPTF9XSElURSk7CiAgICAgICAgfQogICAgfSBlbHNlIGlmICh0aWVyID09IDMpIHsKICAgICAgICAvLyBHQUxBQ1RJQyBDT1JFOiBob3Qgcm90YXRpbmcgY29yZSArIHNtYWxsIHJhZGlhbCBidXJzdHMuCiAgICAgICAgY29uc3QgaW50IGN4ID0gMTgsIGN5ID0gNzg7CiAgICAgICAgaW50IHB1bHNlID0gNCArIChpbnQpKChzcGFjZUFuaW1GcmFtZSA+PiAzKSAmIDN1KTsKICAgICAgICBmb3IgKGludCB5eSA9IC1wdWxzZTsgeXkgPD0gcHVsc2U7IHl5KyspIHsKICAgICAgICAgICAgZm9yIChpbnQgeHggPSAtcHVsc2U7IHh4IDw9IHB1bHNlOyB4eCsrKSB7CiAgICAgICAgICAgICAgICBpbnQgZCA9IHh4ICogeHggKyB5eSAqIHl5OwogICAgICAgICAgICAgICAgaWYgKGQgPD0gcHVsc2UgKiBwdWxzZSkKICAgICAgICAgICAgICAgICAgICBzZXRQaXhlbChjeSArIHl5LCBjeCArIHh4LCBkIDwgNSA/IENPTF9XSElURSA6ICgoZCAmIDEpID8gQ09MX1lFTExPVyA6IDB4N0YxOCkpOwogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIGZvciAoaW50IGkgPSAwOyBpIDwgMjI7IGkrKykgewogICAgICAgICAgICBpbnQgbGVuID0gNSArIChpICUgMTEpOwogICAgICAgICAgICBpbnQgZGlyID0gKGkgKyAoaW50KShzcGFjZUFuaW1GcmFtZSA+PiAzKSkgJiA3OwogICAgICAgICAgICBpbnQgZHggPSAoZGlyID09IDAgfHwgZGlyID09IDEgfHwgZGlyID09IDcpID8gMSA6IChkaXIgPj0gMyAmJiBkaXIgPD0gNSA/IC0xIDogMCk7CiAgICAgICAgICAgIGludCBkeSA9IChkaXIgPj0gMSAmJiBkaXIgPD0gMykgPyAxIDogKGRpciA+PSA1ICYmIGRpciA8PSA3ID8gLTEgOiAwKTsKICAgICAgICAgICAgaW50IHggPSBjeCArIGR4ICogbGVuOwogICAgICAgICAgICBpbnQgeSA9IGN5ICsgZHkgKiBsZW47CiAgICAgICAgICAgIGlmICh4ID49IDEgJiYgeCA8IDM3ICYmIHkgPj0gMiAmJiB5IDwgMTU4KQogICAgICAgICAgICAgICAgc2V0UGl4ZWwoeSwgeCwgKGkgJiAyKSA/IDB4N0YxOCA6IDB4NUQxMik7CiAgICAgICAgfQogICAgfQp9JycnCnMgPSByZXBsYWNlX2Z1bmN0aW9uKHMsICdkcmF3RHluYW1pY1NwYWNlVGljaycsIGR5bmFtaWMpCgojIFZlcnNpb24gbWFya2VyIC8gc2FuaXR5IGNoZWNrcy4KcyA9IHMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC4zLjYgU1RBR0UgMicsICdNSVlPTyBFRElUSU9OIHYwLjMuNicsIDEpCmZvciB0b2tlbiBpbiAoJ2Nvc21pY0VuYWJsZWQnLCAnQ09TTUlDIE1PREU6ICVzJywgJ3Njb3JlID49IDE1MDAwJywgJ1BMQU5FVEFSWSBTUEFDRScsICdHQUxBQ1RJQyBDT1JFJyk6CiAgICBpZiB0b2tlbiBub3QgaW4gczoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KGYnRVJST1I6IG1pc3NpbmcgQ29zbWljIE1vZGUgdG9rZW46IHt0b2tlbn0nKQoKIyBHdWFyZCBhZ2FpbnN0IGR1cGxpY2F0ZSBwZXJzaXN0ZW50IHNldHRpbmcgZ2xvYmFscy4KaWYgcy5jb3VudCgnc3RhdGljIGludCBjb3NtaWNFbmFibGVkID0gMDsnKSAhPSAxOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IGR1cGxpY2F0ZSBvciBtaXNzaW5nIGNvc21pY0VuYWJsZWQgZ2xvYmFsLicpCgpwLndyaXRlX3RleHQocykKcHJpbnQoJ0FwcGxpZWQgdjAuMy42IFN0YWdlIDM6IHBlcnNpc3RlbnQgQ29zbWljIE1vZGUgd2l0aCBzY29yZS1ldm9sdmluZyB1bml2ZXJzZScpCg==' | base64 -d > /tmp/v036_stage3.py
           python3 /tmp/v036_stage3.py
 
+
+      - name: Apply v0.3.7 falling-piece flicker fix and circular inward Black Hole
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path("game.c")
+          s = p.read_text()
+
+          def function_span(src, name):
+              m = re.search(r'(?m)^(?:static\\s+)?void\\s+' + re.escape(name) + r'\\s*\\(void\\)\\s*\\{', src)
+              if not m:
+                  raise SystemExit(f"ERROR: {name}() not found.")
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f"ERROR: unterminated {name}().")
+
+          # Restore original tight board->piece timing to eliminate falling-piece blink.
+          a, b = function_span(s, 'drawBoard')
+          block = s[a:b]
+          if 'drawDynamicSpaceTick();' not in block:
+              raise SystemExit('ERROR: expected drawDynamicSpaceTick() inside drawBoard().')
+          block = block.replace('    drawDynamicSpaceTick();\\n', '', 1)
+          s = s[:a] + block + s[b:]
+
+          # Run the tiny left-margin animation only after the piece has already been drawn.
+          a, b = function_span(s, 'drawPiece')
+          block = s[a:b]
+          if 'drawDynamicSpaceTick();' not in block:
+              close = block.rfind('}')
+              block = block[:close].rstrip() + '\\n    drawDynamicSpaceTick();\\n' + block[close:]
+              s = s[:a] + block + s[b:]
+
+          black_hole = r'''static void drawBlackHoleVisualizer(void) {
+              static const u16 sandCols[4] = {0x26A1, 0x211A, 0x173B, 0x718C};
+              static const signed char circleX[64] = {
+                  64,64,63,61,59,56,53,49,45,40,36,30,24,19,12,6,
+                  0,-6,-12,-19,-24,-30,-36,-40,-45,-49,-53,-56,-59,-61,-63,-64,
+                  -64,-64,-63,-61,-59,-56,-53,-49,-45,-40,-36,-30,-24,-19,-12,-6,
+                  0,6,12,19,24,30,36,40,45,49,53,56,59,61,63,64
+              };
+              static const signed char circleY[64] = {
+                  0,6,12,19,24,30,36,40,45,49,53,56,59,61,63,64,
+                  64,64,63,61,59,56,53,49,45,40,36,30,24,19,12,6,
+                  0,-6,-12,-19,-24,-30,-36,-40,-45,-49,-53,-56,-59,-61,-63,-64,
+                  -64,-64,-63,-61,-59,-56,-53,-49,-45,-40,-36,-30,-24,-19,-12,-6
+              };
+
+              int level = visualizerAudioLevel();
+              visualizerFrame++;
+              for (int i = 0; i < WIDTH * HEIGHT; i++)
+                  visualizerBuffer[i] = COL_BLACK;
+
+              u32 seed = 0xB14C40E1u;
+              for (int i = 0; i < 74; i++) {
+                  seed = seed * 1664525u + 1013904223u;
+                  int x = (seed >> 16) % WIDTH;
+                  seed = seed * 1664525u + 1013904223u;
+                  int y = (seed >> 16) % HEIGHT;
+                  vizPixel(y, x, (i % 11 == 0) ? COL_WHITE : 0x4210);
+              }
+
+              const int cx = 120, cy = 80;
+              const int innerR = 17, outerR = 70;
+              int pullSpeed = 1 + level / 10;
+              int particles = 330 + level * 5;
+              if (particles > 480) particles = 480;
+
+              // Particles spiral continuously INWARD. At the horizon they respawn outside.
+              for (int i = 0; i < particles; i++) {
+                  int travel = (int)(((u32)i * 29u + visualizerFrame * (u32)pullSpeed) %
+                                     (u32)(outerR - innerR));
+                  int radius = outerR - travel;
+                  int baseAngle = (i * 17 + (i >> 3) * 7) & 63;
+                  int curl = (outerR - radius) >> 1;
+                  int angle = (baseAngle + curl + (int)(visualizerFrame >> 2)) & 63;
+                  int x = cx + (circleX[angle] * radius) / 64;
+                  int y = cy + (circleY[angle] * radius) / 64;
+                  u16 c = sandCols[(i + (travel >> 3)) & 3];
+                  vizPixel(y, x, c);
+                  if (level > 22 && (i % 7) == 0) vizPixel(y, x + 1, c);
+              }
+
+              // True circular accretion ring.
+              int ringR = innerR + 2 + level / 8;
+              if (ringR > 24) ringR = 24;
+              for (int a = 0; a < 64; a++) {
+                  int x = cx + (circleX[a] * ringR) / 64;
+                  int y = cy + (circleY[a] * ringR) / 64;
+                  u16 c = sandCols[((a >> 3) + (visualizerFrame >> 3)) & 3];
+                  vizPixel(y, x, c);
+                  if ((a & 3) == 0) {
+                      int r2 = ringR + 1;
+                      vizPixel(cy + (circleY[a] * r2) / 64,
+                               cx + (circleX[a] * r2) / 64, COL_WHITE);
+                  }
+              }
+
+              // Round event horizon masks swallowed grains.
+              int core = innerR - 3 + level / 16;
+              if (core > innerR) core = innerR;
+              for (int yy = -core; yy <= core; yy++)
+                  for (int xx = -core; xx <= core; xx++)
+                      if (xx * xx + yy * yy <= core * core)
+                          vizPixel(cy + yy, cx + xx, COL_BLACK);
+
+              // Music accents also move inward instead of bursting outward.
+              for (int i = 0; i < level; i++) {
+                  int travel = (int)(((u32)i * 11u + visualizerFrame *
+                                      (u32)(2 + level / 12)) % 20u);
+                  int radius = 38 - travel;
+                  int angle = (i * 23 + (int)(visualizerFrame >> 1) + travel) & 63;
+                  int x = cx + (circleX[angle] * radius) / 64;
+                  int y = cy + (circleY[angle] * radius) / 64;
+                  vizPixel(y, x, (i & 3) == 0 ? COL_WHITE : sandCols[i & 3]);
+              }
+
+              volatile unsigned short *savedVideoBuffer = videoBuffer;
+              videoBuffer = visualizerBuffer;
+              drawCenteredShadowString(7, 20, 200, 8, "BLACK HOLE", COL_YELLOW);
+              drawCenteredShadowString(147, 20, 200, 8, "B - CHOOSE  START - MENU", COL_WHITE);
+              videoBuffer = savedVideoBuffer;
+              waitForVBlank();
+              drawFullScreenImageDMA(visualizerBuffer);
+          }'''
+
+          a, b = function_span(s, 'drawBlackHoleVisualizer')
+          s = s[:a] + black_hole + s[b:]
+          s = s.replace('MIYOO EDITION v0.3.6', 'MIYOO EDITION v0.3.7', 1)
+
+          a, b = function_span(s, 'drawBoard')
+          if 'drawDynamicSpaceTick();' in s[a:b]:
+              raise SystemExit('ERROR: dynamic space still runs inside drawBoard().')
+          a, b = function_span(s, 'drawPiece')
+          if s[a:b].count('drawDynamicSpaceTick();') != 1:
+              raise SystemExit('ERROR: drawPiece() should contain one dynamic-space call.')
+          if 'static const signed char circleX[64]' not in s or 'outerR - travel' not in s:
+              raise SystemExit('ERROR: circular inward Black Hole patch missing.')
+
+          p.write_text(s)
+          print('Applied v0.3.7 flicker fix + circular inward Black Hole')
+          PY
+
+      - name: Verify v0.3.7 render polish
+        run: |
+          grep -n "static const signed char circleX\\[64\\]" game.c
+          grep -n "outerR - travel" game.c
+          grep -n "drawDynamicSpaceTick();" game.c
+
       - name: Verify v0.3.6 Stage 3
         run: |
           grep -n "cosmicEnabled" game.c
@@ -653,13 +809,13 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.3.6 Cosmic Mode.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.3.6 Cosmic Mode.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.3.6 Cosmic Mode.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.3.6-Stage3-Cosmic-Mode
-          path: "Sandtris - Miyoo Edition v0.3.6 Cosmic Mode.gba"
+          name: Sandtris-Miyoo-v0.3.7-Render-Polish
+          path: "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
           if-no-files-found: error
