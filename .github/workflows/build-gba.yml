@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.4.0 Three-Track Music Library
+name: Build Sandtris Miyoo Edition v0.4.0 FIX1 Three-Track Music Library
 
 on:
   push:
@@ -1161,7 +1161,10 @@ jobs:
           marker = "static void restoreGameplayScreen(void) {"
           if marker not in s:
               raise SystemExit("ERROR: restoreGameplayScreen marker not found.")
-          helpers_c = r'''static char *musicTrackName(int track) {
+          helpers_c = r'''static void drawShadowString(int row, int col, char *str, u16 color);
+          static void drawCenteredShadowString(int row, int col, int width, int height, char *str, u16 color);
+          
+          static char *musicTrackName(int track) {
               if (track == 1) return "USURPER";
               if (track == 2) return "PROPAGATION";
               return "ULTRAFICHE OF YOU";
@@ -1361,15 +1364,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.4.0 Music Library.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.4.0-Music-Library
-          path: "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
+          name: Sandtris-Miyoo-v0.4.0-Music-Library-FIX1
+          path: "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
           if-no-files-found: error
