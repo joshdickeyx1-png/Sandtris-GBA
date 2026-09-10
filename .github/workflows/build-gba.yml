@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.3.7 FIX2 Flicker Fix + Circular Black Hole
+name: Build Sandtris Miyoo Edition v0.4.0 Three-Track Music Library
 
 on:
   push:
@@ -821,19 +821,555 @@ jobs:
           grep -n "score >= 15000" game.c
           grep -n "SRAM8\[23\]" game.c
 
+      - name: Apply v0.4.0 three-track Music Library
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import math
+          import re
+          
+          # ---------- Generate the two additional PCM assets ----------
+          tracks = [
+              ("usurper", Path("assets/audio/usurper.raw")),
+              ("propagation", Path("assets/audio/propagation.raw")),
+          ]
+          SAMPLE_RATE = 16834
+          
+          for symbol, raw_path in tracks:
+              if not raw_path.exists():
+                  raise SystemExit(f"ERROR: {raw_path} was not found. Upload the two new .raw files from the kit into assets/audio/.")
+              data = raw_path.read_bytes()
+              byte_count = len(data)
+              loop_blocks = math.ceil(byte_count / 65536)
+              Path(f"assets/{symbol}.h").write_text("\n".join([
+                  f"#ifndef {symbol.upper()}_H",
+                  f"#define {symbol.upper()}_H",
+                  "",
+                  f"#define {symbol}_bytes {byte_count}",
+                  f"#define {symbol}_sampleRate {SAMPLE_RATE}",
+                  f"#define {symbol}_loopBlocks {loop_blocks}",
+                  "",
+                  f"extern const char {symbol}[];",
+                  "",
+                  "#endif",
+                  "",
+              ]))
+              with Path(f"assets/{symbol}.c").open("w", newline="\n") as f:
+                  f.write(f'#include "{symbol}.h"\n\n')
+                  f.write(f"const char {symbol}[] =\n")
+                  for i in range(0, byte_count, 32):
+                      chunk = data[i:i + 32]
+                      f.write('"' + ''.join(f"\\x{b:02x}" for b in chunk) + '"\n')
+                  f.write(";\n")
+              print(f"{symbol}: {byte_count} bytes, {loop_blocks} timer blocks")
+          
+          # ---------- Replace audio.c with a three-track playback engine ----------
+          audio_c = r'''#include "audio.h"
+          #include "gba.h"
+          #include "assets/typeA.h"
+          #include "assets/usurper.h"
+          #include "assets/propagation.h"
+          
+          static const unsigned short ticks_per_sample = 16777216 / 16834;
+          static volatile int musicMode = 0;
+          static volatile int currentTrack = 0;
+          static volatile int musicPlaying = 0;
+          static unsigned int shuffleState = 0x51A7C0DEu;
+          
+          static const char *trackData(int track) {
+              if (track == 1) return usurper;
+              if (track == 2) return propagation;
+              return typeA;
+          }
+          
+          static unsigned int trackBytes(int track) {
+              if (track == 1) return (unsigned int)usurper_bytes;
+              if (track == 2) return (unsigned int)propagation_bytes;
+              return (unsigned int)typeA_bytes;
+          }
+          
+          static unsigned int trackBlocks(int track) {
+              if (track == 1) return (unsigned int)usurper_loopBlocks;
+              if (track == 2) return (unsigned int)propagation_loopBlocks;
+              return (unsigned int)typeA_loopBlocks;
+          }
+          
+          static void chooseStartTrack(void) {
+              if (musicMode >= 0 && musicMode <= 2) {
+                  currentTrack = musicMode;
+              } else {
+                  shuffleState = shuffleState * 1664525u + 1013904223u;
+                  currentTrack = (int)((shuffleState >> 16) % 3u);
+              }
+          }
+          
+          static void chooseNextTrack(void) {
+              if (musicMode == 3) {
+                  int old = currentTrack;
+                  shuffleState = shuffleState * 1664525u + 1013904223u;
+                  int next = (int)((shuffleState >> 16) % 3u);
+                  if (next == old)
+                      next = (next + 1) % 3;
+                  currentTrack = next;
+              } else {
+                  currentTrack = (currentTrack + 1) % 3;
+              }
+          }
+          
+          static void startCurrentTrackHardware(void) {
+              unsigned int blocks = trackBlocks(currentTrack);
+              if (blocks < 1u) blocks = 1u;
+              if (blocks > 65535u) blocks = 65535u;
+          
+              TIMER1_REGCNT = 0;
+              TIMER2_REGCNT = 0;
+              DMA[DMA_CHANNEL_1].cnt = 0;
+          
+              REG_SOUNDCNT_H |= SOUND_A_RIGHT_CHANNEL | SOUND_A_LEFT_CHANNEL | SOUND_A_FIFO_RESET;
+              DMA[DMA_CHANNEL_1].src = trackData(currentTrack);
+              DMA[DMA_CHANNEL_1].dst = SOUND_A_FIFO_BUFFER;
+              DMA[DMA_CHANNEL_1].cnt = DMA_ON | DMA_DESTINATION_FIXED | DMA_32 | DMA_REPEAT | DMA_AT_REFRESH;
+          
+              TIMER1_REGDATA = 0;
+              TIMER2_REGDATA = (unsigned short)(65536u - blocks);
+              TIMER1_REGCNT = TIMER_ENABLE | TIMER_CASCADE;
+              TIMER2_REGCNT = TIMER_ENABLE | TIMER_CASCADE | TIMER_INTERRUPT;
+              REG_IE |= IRQ_TIMER2;
+              REG_IME = 1;
+              musicPlaying = 1;
+          }
+          
+          void audio_set_music_mode(int mode) {
+              if (mode < 0 || mode > 3) mode = 0;
+              musicMode = mode;
+              if (mode <= 2)
+                  currentTrack = mode;
+          }
+          
+          int audio_get_music_mode(void) {
+              return musicMode;
+          }
+          
+          int audio_get_current_track(void) {
+              return currentTrack;
+          }
+          
+          int audio_is_music_playing(void) {
+              return musicPlaying;
+          }
+          
+          int audio_music_level(void) {
+              if (!musicPlaying)
+                  return 6;
+          
+              int track = currentTrack;
+              const signed char *data = (const signed char *)trackData(track);
+              unsigned int bytes = trackBytes(track);
+              unsigned int blocks = trackBlocks(track);
+              if (!data || bytes == 0u || blocks == 0u)
+                  return 6;
+          
+              unsigned int blockBase = 65536u - blocks;
+              unsigned int block = ((unsigned int)TIMER2_REGDATA - blockBase) & 0xFFFFu;
+              if (block >= blocks)
+                  block = 0;
+              unsigned int pos = block * 65536u + (unsigned int)TIMER1_REGDATA;
+              if (pos >= bytes)
+                  pos %= bytes;
+          
+              int total = 0;
+              for (int i = 0; i < 8; i++) {
+                  unsigned int at = pos + (unsigned int)(i * 97);
+                  if (at >= bytes)
+                      at %= bytes;
+                  int v = (int)data[at];
+                  total += v < 0 ? -v : v;
+              }
+              int level = total >> 5;
+              if (level < 4) level = 4;
+              if (level > 31) level = 31;
+              return level;
+          }
+          
+          void __attribute__ ((target("arm"))) play_typeA(void) {
+              startCurrentTrackHardware();
+              REG_IF = IRQ_TIMER2;
+          }
+          
+          void __attribute__ ((target("arm"))) stop_sfx(void) {
+              REG_SOUNDCNT_H &= ~(SOUND_B_RIGHT_CHANNEL | SOUND_B_LEFT_CHANNEL);
+              DMA[DMA_CHANNEL_2].cnt = 0;
+              REG_IF = IRQ_TIMER3;
+              TIMER3_REGCNT = 0;
+          }
+          
+          void __attribute__ ((target("arm"))) interrupt(void) {
+              if (REG_IF & IRQ_TIMER3)
+                  stop_sfx();
+          
+              if (REG_IF & IRQ_TIMER2) {
+                  TIMER1_REGCNT = 0;
+                  TIMER2_REGCNT = 0;
+                  chooseNextTrack();
+                  startCurrentTrackHardware();
+                  REG_IF = IRQ_TIMER2;
+              }
+          }
+          
+          void init_audio(void) {
+              REG_SOUNDCNT_X = SOUND_MASTER_ENABLE;
+              TIMER0_REGDATA = 65536 - ticks_per_sample;
+              TIMER0_REGCNT = TIMER_ENABLE | TIMER_FREQ_1;
+              REG_ISR_MAIN = interrupt;
+          }
+          
+          void reset_music(void) {
+              musicPlaying = 0;
+              REG_SOUNDCNT_X = 0;
+              REG_SOUNDCNT_H = 0;
+              TIMER0_REGCNT = 0;
+              TIMER1_REGCNT = 0;
+              TIMER2_REGCNT = 0;
+              TIMER3_REGCNT = 0;
+              DMA[DMA_CHANNEL_1].cnt = 0;
+              REG_IE = 0;
+              REG_IME = 0;
+          }
+          
+          void loop_music(void) {
+              chooseStartTrack();
+              startCurrentTrackHardware();
+          }
+          
+          void stop_music(void) {
+              musicPlaying = 0;
+              REG_SOUNDCNT_H &= ~(SOUND_A_RIGHT_CHANNEL | SOUND_A_LEFT_CHANNEL);
+              TIMER1_REGCNT = 0;
+              TIMER2_REGCNT = 0;
+              DMA[DMA_CHANNEL_1].cnt = 0;
+          }
+          
+          void play_sfx(const char* sfx, int bytes) {
+              REG_SOUNDCNT_H |= SOUND_B_RIGHT_CHANNEL | SOUND_B_LEFT_CHANNEL | SOUND_B_FIFO_RESET;
+              DMA[DMA_CHANNEL_2].cnt = 0;
+              DMA[DMA_CHANNEL_2].src = sfx;
+              DMA[DMA_CHANNEL_2].dst = SOUND_B_FIFO_BUFFER;
+              DMA[DMA_CHANNEL_2].cnt = DMA_ON | DMA_DESTINATION_FIXED | DMA_32 | DMA_REPEAT | DMA_AT_REFRESH;
+          
+              TIMER3_REGCNT = 0;
+              TIMER3_REGDATA = 65536 - bytes + 1000;
+              TIMER3_REGCNT = TIMER_ENABLE | TIMER_FREQ_1024 | TIMER_INTERRUPT;
+              REG_IE |= IRQ_TIMER3;
+              REG_IME = 1;
+          }
+          '''
+          Path("audio.c").write_text(audio_c)
+          
+          # Add the new public audio helpers without disturbing the old API.
+          ah = Path("audio.h")
+          hs = ah.read_text()
+          anchor = "void play_sfx(const char* sfx, int bytes);"
+          if anchor not in hs:
+              raise SystemExit("ERROR: audio.h play_sfx prototype not found.")
+          helpers = '''void audio_set_music_mode(int mode);\nint audio_get_music_mode(void);\nint audio_get_current_track(void);\nint audio_is_music_playing(void);\nint audio_music_level(void);\n\n'''
+          if "audio_set_music_mode" not in hs:
+              hs = hs.replace(anchor, helpers + anchor, 1)
+          ah.write_text(hs)
+          
+          # ---------- Game/menu integration ----------
+          gp = Path("game.c")
+          s = gp.read_text()
+          gh = Path("game.h")
+          ghs = gh.read_text()
+          
+          # Add a dedicated music library state.
+          if "    MUSICMENU," not in ghs:
+              if "    VISUALIZER," not in ghs:
+                  raise SystemExit("ERROR: VISUALIZER state not found in game.h.")
+              ghs = ghs.replace("    VISUALIZER,", "    MUSICMENU,\n    VISUALIZER,", 1)
+          gh.write_text(ghs)
+          
+          # Flexible balanced-brace function utilities.
+          def function_span(src, name):
+              for m in re.finditer(r'\b' + re.escape(name) + r'\s*\(', src):
+                  line_start = src.rfind('\n', 0, m.start()) + 1
+                  prefix = src[line_start:m.start()]
+                  if 'void' not in prefix and 'int' not in prefix:
+                      continue
+                  brace = src.find('{', m.end())
+                  if brace < 0:
+                      continue
+                  semi = src.find(';', m.end(), brace + 1)
+                  if semi != -1:
+                      continue
+                  depth = 0
+                  for i in range(brace, len(src)):
+                      if src[i] == '{':
+                          depth += 1
+                      elif src[i] == '}':
+                          depth -= 1
+                          if depth == 0:
+                              return line_start, i + 1
+              raise SystemExit(f"ERROR: {name}() definition not found.")
+          
+          def replace_function(src, name, replacement):
+              a, b = function_span(src, name)
+              return src[:a] + replacement + src[b:]
+          
+          # Persistent setting + submenu state. SRAM byte 24 follows Cosmic Mode at byte 23.
+          global_anchor = "static int menuSelection = 0;\n"
+          if global_anchor not in s:
+              raise SystemExit("ERROR: menuSelection global not found.")
+          if "static int musicMode = 0;" not in s:
+              s = s.replace(global_anchor, global_anchor +
+                  "static int musicMode = 0;\n"
+                  "static int musicMenuSelection = 0;\n"
+                  "static int musicMenuDirty = 1;\n"
+                  "static int musicMenuLastTrack = -1;\n", 1)
+          
+          save_anchor = "    SRAM8[23] = (u8)(cosmicEnabled ? 1 : 0);"
+          load_anchor = "        cosmicEnabled = SRAM8[23] <= 1 ? SRAM8[23] : 0;"
+          default_anchor = "        cosmicEnabled = 0;"
+          if save_anchor not in s or load_anchor not in s or default_anchor not in s:
+              raise SystemExit("ERROR: v0.3.6 Cosmic save anchors not found.")
+          if "SRAM8[24]" not in s:
+              s = s.replace(save_anchor, save_anchor + "\n    SRAM8[24] = (u8)musicMode;", 1)
+              s = s.replace(load_anchor, load_anchor + "\n        musicMode = SRAM8[24] <= 3 ? SRAM8[24] : 0;", 1)
+              s = s.replace(default_anchor, default_anchor + "\n        musicMode = 0;", 1)
+          
+          # Ensure every normal music startup uses the saved playlist mode.
+          pat_start = re.compile(r'(?m)^(?P<i>\s*)reset_music\(\);\n(?P=i)if \(musicEnabled\) \{')
+          
+          def start_repl(m):
+              i = m.group('i')
+              return f"{i}reset_music();\n{i}audio_set_music_mode(musicMode);\n{i}if (musicEnabled) {{"
+          
+          s, start_count = pat_start.subn(start_repl, s)
+          if start_count < 2:
+              raise SystemExit(f"ERROR: expected at least two music startup sites, found {start_count}.")
+          
+          # Replace the old hard-coded typeA visualizer sampling with the active-track audio engine.
+          visual_level = r'''static int visualizerAudioLevel(void) {
+              if (!musicEnabled)
+                  return 6;
+              return audio_music_level();
+          }'''
+          s = replace_function(s, "visualizerAudioLevel", visual_level)
+          
+          # Music library screen helpers are inserted before restoreGameplayScreen().
+          marker = "static void restoreGameplayScreen(void) {"
+          if marker not in s:
+              raise SystemExit("ERROR: restoreGameplayScreen marker not found.")
+          helpers_c = r'''static char *musicTrackName(int track) {
+              if (track == 1) return "USURPER";
+              if (track == 2) return "PROPAGATION";
+              return "ULTRAFICHE OF YOU";
+          }
+          
+          static char *musicModeShortName(void) {
+              if (!musicEnabled) return "OFF";
+              if (musicMode == 1) return "USURPER";
+              if (musicMode == 2) return "PROPAGATION";
+              if (musicMode == 3) return "SHUFFLE";
+              return "ULTRAFICHE";
+          }
+          
+          static void drawMusicMenu(void) {
+              waitForVBlank();
+              drawFullScreenImageDMA(title);
+              drawCenteredShadowString(27, 28, 184, 8, "MUSIC LIBRARY", COL_YELLOW);
+          
+              char line[38];
+              snprintf(line, sizeof(line), "%c ULTRAFICHE OF YOU", musicMenuSelection == 0 ? '>' : ' ');
+              drawShadowString(49, 48, line, musicMenuSelection == 0 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c USURPER", musicMenuSelection == 1 ? '>' : ' ');
+              drawShadowString(65, 48, line, musicMenuSelection == 1 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c PROPAGATION", musicMenuSelection == 2 ? '>' : ' ');
+              drawShadowString(81, 48, line, musicMenuSelection == 2 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c SHUFFLE", musicMenuSelection == 3 ? '>' : ' ');
+              drawShadowString(97, 48, line, musicMenuSelection == 3 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c OFF", musicMenuSelection == 4 ? '>' : ' ');
+              drawShadowString(113, 48, line, musicMenuSelection == 4 ? COL_YELLOW : COL_WHITE);
+          
+              if (musicEnabled && audio_is_music_playing())
+                  snprintf(line, sizeof(line), "NOW: %s", musicTrackName(audio_get_current_track()));
+              else
+                  snprintf(line, sizeof(line), "NOW: STOPPED");
+              drawCenteredShadowString(132, 18, 204, 8, line, COL_WHITE);
+              drawCenteredShadowString(148, 18, 204, 8, "A SELECT   B BACK", COL_WHITE);
+          }
+          
+          '''
+          if "static void drawMusicMenu(void)" not in s:
+              s = s.replace(marker, helpers_c + marker, 1)
+          
+          # Replace title menu with the same seven choices, but Music now shows the selected library mode.
+          title_menu = r'''static void drawTitleMenu(void) {
+              waitForVBlank();
+              if (!titleBackgroundDrawn) {
+                  drawFullScreenImageDMA(title);
+                  titleBackgroundDrawn = 1;
+                  drawCenteredShadowString(35, 38, 164, 8, "MIYOO EDITION v0.4.0", COL_WHITE);
+              }
+          
+              restoreTitleStrip(47, 46, 176, 13);
+              restoreTitleStrip(62, 46, 176, 13);
+              restoreTitleStrip(77, 46, 176, 13);
+              restoreTitleStrip(92, 46, 176, 13);
+              restoreTitleStrip(107, 46, 176, 13);
+              restoreTitleStrip(122, 46, 176, 13);
+              restoreTitleStrip(137, 46, 176, 13);
+          
+              char line[38];
+              snprintf(line, sizeof(line), "%c START GAME", menuSelection == 0 ? '>' : ' ');
+              drawShadowString(50, 50, line, menuSelection == 0 ? COL_YELLOW : COL_WHITE);
+          
+              char *diffName = difficulty == 0 ? "EASY" : (difficulty == 1 ? "NORMAL" : "HARD");
+              snprintf(line, sizeof(line), "%c DIFFICULTY: %s", menuSelection == 1 ? '>' : ' ', diffName);
+              drawShadowString(65, 50, line, menuSelection == 1 ? COL_YELLOW : COL_WHITE);
+          
+              snprintf(line, sizeof(line), "%c MUSIC: %s", menuSelection == 2 ? '>' : ' ', musicModeShortName());
+              drawShadowString(80, 50, line, menuSelection == 2 ? COL_YELLOW : COL_WHITE);
+          
+              snprintf(line, sizeof(line), "%c ELEMENTS: %s", menuSelection == 3 ? '>' : ' ', elementsEnabled ? "ON" : "OFF");
+              drawShadowString(95, 50, line, menuSelection == 3 ? COL_YELLOW : COL_WHITE);
+          
+              snprintf(line, sizeof(line), "%c COSMIC MODE: %s", menuSelection == 4 ? '>' : ' ', cosmicEnabled ? "ON" : "OFF");
+              drawShadowString(110, 50, line, menuSelection == 4 ? COL_YELLOW : COL_WHITE);
+          
+              snprintf(line, sizeof(line), "%c MUSIC VISUALIZER", menuSelection == 5 ? '>' : ' ');
+              drawShadowString(125, 50, line, menuSelection == 5 ? COL_YELLOW : COL_WHITE);
+          
+              snprintf(line, sizeof(line), "%c HIGH SCORES", menuSelection == 6 ? '>' : ' ');
+              drawShadowString(140, 50, line, menuSelection == 6 ? COL_YELLOW : COL_WHITE);
+          }'''
+          s = replace_function(s, "drawTitleMenu", title_menu)
+          
+          # Change A on the Music row from a toggle to opening the music library.
+          music_branch_pat = re.compile(
+              r'            \} else if \(menuSelection == 2\) \{\n.*?(?=            \} else if \(menuSelection == 3\) \{)',
+              re.S,
+          )
+          m = music_branch_pat.search(s)
+          if not m:
+              raise SystemExit("ERROR: title Music branch not found.")
+          music_branch = '''            } else if (menuSelection == 2) {
+                          musicMenuSelection = musicEnabled ? musicMode : 4;
+                          musicMenuDirty = 1;
+                          musicMenuLastTrack = -1;
+                          if (musicEnabled) {
+                              reset_music();
+                              audio_set_music_mode(musicMode);
+                              init_audio();
+                              loop_music();
+                          }
+                          state = MUSICMENU;
+          '''
+          s = s[:m.start()] + music_branch + s[m.end():]
+          
+          # Add the music library state immediately before the visualizer state.
+          case_marker = "    case VISUALIZER:\n"
+          if case_marker not in s:
+              raise SystemExit("ERROR: VISUALIZER case not found.")
+          music_case = r'''    case MUSICMENU:
+                  if (audio_get_current_track() != musicMenuLastTrack) {
+                      musicMenuLastTrack = audio_get_current_track();
+                      musicMenuDirty = 1;
+                  }
+                  if (musicMenuDirty) {
+                      drawMusicMenu();
+                      musicMenuDirty = 0;
+                  }
+                  if (key_hit(BUTTON_UP)) {
+                      musicMenuSelection = (musicMenuSelection + 4) % 5;
+                      musicMenuDirty = 1;
+                  }
+                  if (key_hit(BUTTON_DOWN)) {
+                      musicMenuSelection = (musicMenuSelection + 1) % 5;
+                      musicMenuDirty = 1;
+                  }
+                  if (key_hit(BUTTON_A)) {
+                      if (musicMenuSelection == 4) {
+                          musicEnabled = 0;
+                          reset_music();
+                      } else {
+                          musicEnabled = 1;
+                          musicMode = musicMenuSelection;
+                          reset_music();
+                          audio_set_music_mode(musicMode);
+                          init_audio();
+                          loop_music();
+                      }
+                      saveData();
+                      musicMenuLastTrack = -1;
+                      musicMenuDirty = 1;
+                  } else if (key_hit(BUTTON_B) || key_hit(BUTTON_START)) {
+                      state = TITLE;
+                      titleDirty = 1;
+                      titleBackgroundDrawn = 0;
+                  }
+                  break;
+          
+          '''
+          if "    case MUSICMENU:\n" not in s:
+              s = s.replace(case_marker, music_case + case_marker, 1)
+          
+          # Sanity checks before writing.
+          for token in (
+              "static int musicMode = 0;",
+              "SRAM8[24]",
+              "static void drawMusicMenu(void)",
+              "case MUSICMENU:",
+              "audio_set_music_mode(musicMode);",
+              "return audio_music_level();",
+              "MIYOO EDITION v0.4.0",
+          ):
+              if token not in s:
+                  raise SystemExit(f"ERROR: missing v0.4.0 token: {token}")
+          
+          # The v0.3.7 render fixes must remain intact.
+          for token in ("static const signed char circleX[64]", "outerR - travel", "drawDynamicSpaceTick();"):
+              if token not in s:
+                  raise SystemExit(f"ERROR: v0.3.7 render fix missing after soundtrack patch: {token}")
+          
+          # Exactly one persistent global and one state handler.
+          if s.count("static int musicMode = 0;") != 1:
+              raise SystemExit("ERROR: duplicate musicMode global.")
+          if s.count("    case MUSICMENU:\n") != 1:
+              raise SystemExit("ERROR: duplicate MUSICMENU handler.")
+          
+          gp.write_text(s)
+          print("Applied v0.4.0 three-track Music Library + auto-advance + Shuffle")
+          PY
+
+      - name: Verify v0.4.0 soundtrack system
+        run: |
+          test -f assets/audio/usurper.raw
+          test -f assets/audio/propagation.raw
+          grep -n "MUSICMENU" game.h game.c
+          grep -n "MUSIC LIBRARY" game.c
+          grep -n "SRAM8\[24\]" game.c
+          grep -n "audio_music_level" audio.c audio.h game.c
+          grep -n "chooseNextTrack" audio.c
+          grep -n "usurper_loopBlocks" assets/usurper.h audio.c
+          grep -n "propagation_loopBlocks" assets/propagation.h audio.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.4.0 Music Library.gba")
+          test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.3.7-Render-Polish
-          path: "Sandtris - Miyoo Edition v0.3.7 Render Polish.gba"
+          name: Sandtris-Miyoo-v0.4.0-Music-Library
+          path: "Sandtris - Miyoo Edition v0.4.0 Music Library.gba"
           if-no-files-found: error
