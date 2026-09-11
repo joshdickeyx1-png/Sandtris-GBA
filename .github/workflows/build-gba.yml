@@ -1434,21 +1434,235 @@ jobs:
           grep -n "musicFullBlocksRemaining" audio.c
           grep -n "musicFinalPartial" audio.c
 
+      - name: Apply v0.5.0 Gravity Shift Mode
+        shell: bash
+        run: |
+          cat > /tmp/v050_gravity.py <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('game.c')
+          s = p.read_text()
+
+          def function_span(src, name):
+              m = re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\b' + re.escape(name) + r'\s*\([^;]*\)\s*\{', src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() definition not found.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f'ERROR: unterminated {name}().')
+
+          def replace_function(src, name, replacement):
+              a,b = function_span(src,name)
+              return src[:a] + replacement + src[b:]
+
+          # Persistent mode setting. Byte 24 is Music Library, so Gravity uses byte 25.
+          anchor = 'static int musicMode = 0;\n'
+          if anchor not in s:
+              raise SystemExit('ERROR: v0.4.0 musicMode anchor not found.')
+          if 'static int gravityModeEnabled = 0;' not in s:
+              s = s.replace(anchor, anchor +
+                  'static int gravityModeEnabled = 0;\n'
+                  'static int gravityDir = 0;\n'
+                  'static int gravityFrame = 0;\n'
+                  'static int gravityWarning = 0;\n', 1)
+
+          save = '    SRAM8[24] = (u8)musicMode;'
+          load = '        musicMode = SRAM8[24] <= 3 ? SRAM8[24] : 0;'
+          default = '        musicMode = 0;'
+          if save not in s or load not in s or default not in s:
+              raise SystemExit('ERROR: Music Library SRAM anchors not found.')
+          s = s.replace(save, save + '\n    SRAM8[25] = (u8)(gravityModeEnabled ? 1 : 0);', 1)
+          s = s.replace(load, load + '\n        gravityModeEnabled = SRAM8[25] <= 1 ? SRAM8[25] : 0;', 1)
+          s = s.replace(default, default + '\n        gravityModeEnabled = 0;', 1)
+
+          # Reset each run to normal downward gravity; mode controls whether shifts begin.
+          init_anchor = '    gameOverHandled = 0;\n'
+          if init_anchor not in s:
+              raise SystemExit('ERROR: init reset anchor not found.')
+          s = s.replace(init_anchor, init_anchor +
+              '    gravityDir = 0;\n'
+              '    gravityFrame = 0;\n'
+              '    gravityWarning = 0;\n', 1)
+
+          # Prototypes are required because drawPiece appears before the gravity helpers.
+          proto_anchor = 'void drawPiece(void) {'
+          if proto_anchor not in s:
+              raise SystemExit('ERROR: drawPiece anchor not found.')
+          s = s.replace(proto_anchor,
+              'static void drawGravityHUD(void);\n'
+              'static void updateWorldGravity(void);\n\n' + proto_anchor, 1)
+
+          # HUD is drawn only in the safe left margin, after the dynamic-space refresh.
+          a,b = function_span(s, 'drawPiece')
+          block = s[a:b]
+          if 'drawDynamicSpaceTick();' not in block:
+              raise SystemExit('ERROR: v0.3.7 dynamic-space hook not found in drawPiece().')
+          block = block.replace('    drawDynamicSpaceTick();', '    drawDynamicSpaceTick();\n    drawGravityHUD();', 1)
+          s = s[:a] + block + s[b:]
+
+          # Gravity engine. The active tetrimino still falls normally; loose sand responds to the field.
+          marker = 'int updatePiece(void) {'
+          if marker not in s:
+              raise SystemExit('ERROR: updatePiece marker not found.')
+          helpers = r'''static char *gravityName(void) {
+              if (gravityDir == 1) return "LEFT";
+              if (gravityDir == 2) return "UP";
+              if (gravityDir == 3) return "RIGHT";
+              return "DOWN";
+          }
+
+          static void gravityWakeChunks(void) {
+              for (int y = 0; y < CHUNKS_HEIGHT; y++)
+                  for (int x = 0; x < CHUNKS_WIDTH; x++)
+                      chunks[y][x] = 1;
+          }
+
+          static void drawGravityHUD(void) {
+              if (!gravityModeEnabled) return;
+              char line[16];
+              drawRectDMA(143, 1, 36, 16, COL_BLACK);
+              snprintf(line, sizeof(line), "G:%s", gravityName());
+              drawString(151, 2, line, gravityWarning ? COL_YELLOW : COL_WHITE);
+              if (gravityWarning)
+                  drawString(143, 2, "SHIFT!", COL_YELLOW);
+          }
+
+          static void gravityMoveCell(int y, int x, int dy, int dx, int pdy, int pdx) {
+              if (!board[y][x]) return;
+              int ny = y + dy, nx = x + dx;
+              if (ny >= 0 && ny < BOARD_HEIGHT && nx >= 1 && nx <= BOARD_WIDTH && !board[ny][nx]) {
+                  board[ny][nx] = board[y][x]; board[y][x] = 0; return;
+              }
+              int side = ((x + y + gravityFrame) & 1) ? 1 : -1;
+              ny = y + dy + pdy * side; nx = x + dx + pdx * side;
+              if (ny >= 0 && ny < BOARD_HEIGHT && nx >= 1 && nx <= BOARD_WIDTH && !board[ny][nx]) {
+                  board[ny][nx] = board[y][x]; board[y][x] = 0; return;
+              }
+              side = -side;
+              ny = y + dy + pdy * side; nx = x + dx + pdx * side;
+              if (ny >= 0 && ny < BOARD_HEIGHT && nx >= 1 && nx <= BOARD_WIDTH && !board[ny][nx]) {
+                  board[ny][nx] = board[y][x]; board[y][x] = 0;
+              }
+          }
+
+          static void updateWorldGravity(void) {
+              if (!gravityModeEnabled) { updateWorld(); return; }
+
+              gravityFrame++;
+              int phase = gravityFrame % 720;
+              gravityWarning = (phase >= 630);
+              if (phase == 0) {
+                  gravityDir = (gravityDir + 1) & 3;
+                  gravityWarning = 0;
+                  gravityWakeChunks();
+              }
+
+              if (gravityDir == 0) { updateWorld(); return; }
+
+              // Half-rate non-downward simulation keeps the original GBA timing budget comfortable.
+              if (gravityFrame & 1) return;
+              if (gravityDir == 2) {
+                  for (int y = 1; y < BOARD_HEIGHT; y++)
+                      for (int x = 1; x <= BOARD_WIDTH; x++)
+                          gravityMoveCell(y, x, -1, 0, 0, 1);
+              } else if (gravityDir == 1) {
+                  for (int x = 1; x <= BOARD_WIDTH; x++)
+                      for (int y = 1; y < BOARD_HEIGHT - 1; y++)
+                          gravityMoveCell(y, x, 0, -1, 1, 0);
+              } else {
+                  for (int x = BOARD_WIDTH; x >= 1; x--)
+                      for (int y = 1; y < BOARD_HEIGHT - 1; y++)
+                          gravityMoveCell(y, x, 0, 1, 1, 0);
+              }
+              gravityWakeChunks();
+          }
+
+          '''
+          s = s.replace(marker, helpers + marker, 1)
+
+          # Only replace the gameplay world-update call, not the original function definition.
+          if s.count('        updateWorld();') < 1:
+              raise SystemExit('ERROR: gameplay updateWorld call not found.')
+          s = s.replace('        updateWorld();', '        updateWorldGravity();', 1)
+
+          # Eight-row title menu: Gravity Shift sits between Cosmic and Visualizer.
+          title_menu = r'''static void drawTitleMenu(void) {
+              waitForVBlank();
+              if (!titleBackgroundDrawn) {
+                  drawFullScreenImageDMA(title);
+                  titleBackgroundDrawn = 1;
+                  drawCenteredShadowString(28, 38, 164, 8, "MIYOO EDITION v0.5.0", COL_WHITE);
+              }
+              for (int y = 40; y <= 152; y += 14) restoreTitleStrip(y, 44, 182, 12);
+              char line[38];
+              char *diffName = difficulty == 0 ? "EASY" : (difficulty == 1 ? "NORMAL" : "HARD");
+              snprintf(line,sizeof(line),"%c START GAME",menuSelection==0?'>':' '); drawShadowString(42,48,line,menuSelection==0?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c DIFFICULTY: %s",menuSelection==1?'>':' ',diffName); drawShadowString(56,48,line,menuSelection==1?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC: %s",menuSelection==2?'>':' ',musicModeShortName()); drawShadowString(70,48,line,menuSelection==2?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ELEMENTS: %s",menuSelection==3?'>':' ',elementsEnabled?"ON":"OFF"); drawShadowString(84,48,line,menuSelection==3?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC MODE: %s",menuSelection==4?'>':' ',cosmicEnabled?"ON":"OFF"); drawShadowString(98,48,line,menuSelection==4?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c GRAVITY SHIFT: %s",menuSelection==5?'>':' ',gravityModeEnabled?"ON":"OFF"); drawShadowString(112,48,line,menuSelection==5?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC VISUALIZER",menuSelection==6?'>':' '); drawShadowString(126,48,line,menuSelection==6?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c HIGH SCORES",menuSelection==7?'>':' '); drawShadowString(140,48,line,menuSelection==7?COL_YELLOW:COL_WHITE);
+          }'''
+          s = replace_function(s, 'drawTitleMenu', title_menu)
+
+          # Navigation 7 -> 8 choices.
+          s, n1 = re.subn(r'menuSelection = \(menuSelection \+ 6\) % 7;', 'menuSelection = (menuSelection + 7) % 8;', s, count=1)
+          s, n2 = re.subn(r'menuSelection = \(menuSelection \+ 1\) % 7;', 'menuSelection = (menuSelection + 1) % 8;', s, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f'ERROR: title navigation patch failed ({n1},{n2}).')
+
+          # Insert Gravity toggle before the current Visualizer branch and shift Visualizer to slot 6.
+          pat = re.compile(r'(            \} else if \(menuSelection == 4\) \{\n.*?)(            \} else if \(menuSelection == 5\) \{\n)', re.S)
+          m = pat.search(s)
+          if not m:
+              raise SystemExit('ERROR: Cosmic/Visualizer title branches not found.')
+          gravity_branch = '''            } else if (menuSelection == 5) {
+                          gravityModeEnabled = !gravityModeEnabled;
+                          saveData();
+                          titleDirty = 1;
+                      } else if (menuSelection == 6) {
+          '''
+          s = s[:m.start(2)] + gravity_branch + s[m.end(2):]
+
+          # Version marker and guards.
+          if 'GRAVITY SHIFT: %s' not in s or 'updateWorldGravity();' not in s or 'SRAM8[25]' not in s:
+              raise SystemExit('ERROR: Gravity Shift sanity check failed.')
+          p.write_text(s)
+          print('Applied v0.5.0 Gravity Shift Mode')
+          PY
+          python3 /tmp/v050_gravity.py
+
+      - name: Verify v0.5.0 Gravity Shift Mode
+        run: |
+          grep -n "GRAVITY SHIFT" game.c
+          grep -n "updateWorldGravity" game.c
+          grep -n "gravityMoveCell" game.c
+          grep -n "SRAM8\[25\]" game.c
+          grep -n "MIYOO EDITION v0.5.0" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.5.0 Gravity Shift.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.5.0 Gravity Shift.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.5.0 Gravity Shift.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.5.0 Gravity Shift.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.4.0-Music-Library-FIX1
-          path: "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
+          name: Sandtris-Miyoo-v0.5.0-Gravity-Shift
+          path: "Sandtris - Miyoo Edition v0.5.0 Gravity Shift.gba"
           if-no-files-found: error
