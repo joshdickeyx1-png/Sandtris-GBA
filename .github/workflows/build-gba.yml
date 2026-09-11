@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.6.0 Anomaly Boss Mode
+name: Build Sandtris Miyoo Edition v0.6.0 FIX1 Anomaly Boss Mode
 
 on:
   push:
@@ -2028,21 +2028,94 @@ jobs:
           grep -n "SRAM8\[26\]" game.c
           grep -n "MIYOO EDITION v0.6.0" game.c
 
+      - name: Apply v0.6.0 FIX1 compile correction
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('game.c')
+          s = p.read_text()
+
+          # GCC -Werror rejects two one-line if statements as misleading indentation.
+          s, n = re.subn(
+              r'(?m)^(\s*)if \(w < 0\) w = 0;\s*if \(w > 42\) w = 42;\s*$',
+              r'\1if (w < 0) w = 0;\n\1if (w > 42) w = 42;',
+              s,
+              count=1,
+          )
+          if n != 1:
+              raise SystemExit('ERROR: FIX1 could not locate anomaly HUD width clamp.')
+
+          def function_span(src, name):
+              pat = re.compile(r'(?m)^static\s+(?:void|int|char\s*\*)\s+' + re.escape(name) + r'\s*\([^\n]*\)\s*\{')
+              m = pat.search(src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() definition not found in FIX1.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{':
+                      depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found in FIX1.')
+
+          # v0.6.0 inserted updateWorldAnomaly() before rerouting gameplay. Its simple
+          # first-match replacement could therefore modify a call inside the helper and
+          # leave the real gameplay call untouched, causing -Werror=unused-function.
+          a, b = function_span(s, 'updateWorldAnomaly')
+          fn = s[a:b]
+          if 'updateWorldAnomaly();' in fn:
+              fn = fn.replace('updateWorldAnomaly();', 'updateWorldGravity();')
+              s = s[:a] + fn + s[b:]
+
+          # The actual gameplay update is after the helper definition. Reroute the first
+          # standalone updateWorldGravity() call after that helper to the anomaly controller.
+          a, b = function_span(s, 'updateWorldAnomaly')
+          tail = s[b:]
+          m = re.search(r'(?m)^(\s*)updateWorldGravity\(\);\s*$', tail)
+          if not m:
+              raise SystemExit('ERROR: FIX1 could not locate gameplay updateWorldGravity() call.')
+          tail = tail[:m.start()] + m.group(1) + 'updateWorldAnomaly();' + tail[m.end():]
+          s = s[:b] + tail
+
+          # Verification guards.
+          a, b = function_span(s, 'updateWorldAnomaly')
+          outside = s[:a] + s[b:]
+          if 'updateWorldAnomaly();' not in outside:
+              raise SystemExit('ERROR: FIX1 did not route gameplay through anomaly controller.')
+          if 'if (w < 0) w = 0; if (w > 42) w = 42;' in s:
+              raise SystemExit('ERROR: FIX1 misleading-indentation line still present.')
+
+          p.write_text(s)
+          print('Applied v0.6.0 FIX1: gameplay anomaly routing + GCC warning cleanup')
+          PY
+
+      - name: Verify v0.6.0 FIX1 compile correction
+        run: |
+          grep -n "updateWorldAnomaly();" game.c
+          grep -n "if (w < 0) w = 0;" game.c
+          grep -n "if (w > 42) w = 42;" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode
-          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
+          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX1
+          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
           if-no-files-found: error
