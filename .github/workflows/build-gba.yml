@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.4.0 FIX1 Three-Track Music Library
+name: Build Sandtris Miyoo Edition v0.4.0 FIX2 Seamless Track Transitions
 
 on:
   push:
@@ -34,8 +34,24 @@ jobs:
           if not raw_path.exists():
               raise SystemExit("ERROR: assets/audio/typeA.raw was not found.")
 
-          data = raw_path.read_bytes()
+          data = bytearray(raw_path.read_bytes())
           byte_count = len(data)
+
+          # Tiny edge fades remove the hard sample discontinuity when changing tracks.
+          fade_in = min(128, byte_count)
+          fade_out = min(256, byte_count)
+          for i in range(fade_in):
+              v = data[i] if data[i] < 128 else data[i] - 256
+              v = int(v * i / max(1, fade_in - 1))
+              data[i] = v & 0xFF
+          for i in range(fade_out):
+              at = byte_count - fade_out + i
+              v = data[at] if data[at] < 128 else data[at] - 256
+              v = int(v * (fade_out - 1 - i) / max(1, fade_out - 1))
+              data[at] = v & 0xFF
+
+          # A small zero guard protects FIFO DMA prefetch at the exact end.
+          encoded_data = bytes(data) + bytes(32)
           sample_rate = 16834
           loop_blocks = math.ceil(byte_count / 65536)
 
@@ -56,8 +72,8 @@ jobs:
           with Path("assets/typeA.c").open("w", newline="\n") as f:
               f.write('#include "typeA.h"\n\n')
               f.write("const char typeA[] =\n")
-              for i in range(0, byte_count, 32):
-                  chunk = data[i:i + 32]
+              for i in range(0, len(encoded_data), 32):
+                  chunk = encoded_data[i:i + 32]
                   f.write('"' + "".join(f"\\x{b:02x}" for b in chunk) + '"\n')
               f.write(";\n")
 
@@ -839,8 +855,22 @@ jobs:
           for symbol, raw_path in tracks:
               if not raw_path.exists():
                   raise SystemExit(f"ERROR: {raw_path} was not found. Upload the two new .raw files from the kit into assets/audio/.")
-              data = raw_path.read_bytes()
+              data = bytearray(raw_path.read_bytes())
               byte_count = len(data)
+
+              fade_in = min(128, byte_count)
+              fade_out = min(256, byte_count)
+              for i in range(fade_in):
+                  v = data[i] if data[i] < 128 else data[i] - 256
+                  v = int(v * i / max(1, fade_in - 1))
+                  data[i] = v & 0xFF
+              for i in range(fade_out):
+                  at = byte_count - fade_out + i
+                  v = data[at] if data[at] < 128 else data[at] - 256
+                  v = int(v * (fade_out - 1 - i) / max(1, fade_out - 1))
+                  data[at] = v & 0xFF
+              encoded_data = bytes(data) + bytes(32)
+
               loop_blocks = math.ceil(byte_count / 65536)
               Path(f"assets/{symbol}.h").write_text("\n".join([
                   f"#ifndef {symbol.upper()}_H",
@@ -858,8 +888,8 @@ jobs:
               with Path(f"assets/{symbol}.c").open("w", newline="\n") as f:
                   f.write(f'#include "{symbol}.h"\n\n')
                   f.write(f"const char {symbol}[] =\n")
-                  for i in range(0, byte_count, 32):
-                      chunk = data[i:i + 32]
+                  for i in range(0, len(encoded_data), 32):
+                      chunk = encoded_data[i:i + 32]
                       f.write('"' + ''.join(f"\\x{b:02x}" for b in chunk) + '"\n')
                   f.write(";\n")
               print(f"{symbol}: {byte_count} bytes, {loop_blocks} timer blocks")
@@ -875,6 +905,11 @@ jobs:
           static volatile int musicMode = 0;
           static volatile int currentTrack = 0;
           static volatile int musicPlaying = 0;
+          static volatile unsigned int musicBaseSamples = 0;
+          static volatile unsigned int musicFullBlocksRemaining = 0;
+          static volatile unsigned int musicRemainder = 0;
+          static volatile unsigned int musicTimerStart = 0;
+          static volatile int musicFinalPartial = 0;
           static unsigned int shuffleState = 0x51A7C0DEu;
           
           static const char *trackData(int track) {
@@ -887,12 +922,6 @@ jobs:
               if (track == 1) return (unsigned int)usurper_bytes;
               if (track == 2) return (unsigned int)propagation_bytes;
               return (unsigned int)typeA_bytes;
-          }
-          
-          static unsigned int trackBlocks(int track) {
-              if (track == 1) return (unsigned int)usurper_loopBlocks;
-              if (track == 2) return (unsigned int)propagation_loopBlocks;
-              return (unsigned int)typeA_loopBlocks;
           }
           
           static void chooseStartTrack(void) {
@@ -918,24 +947,38 @@ jobs:
           }
           
           static void startCurrentTrackHardware(void) {
-              unsigned int blocks = trackBlocks(currentTrack);
-              if (blocks < 1u) blocks = 1u;
-              if (blocks > 65535u) blocks = 65535u;
+              unsigned int bytes = trackBytes(currentTrack);
+              if (bytes < 1u) bytes = 1u;
           
               TIMER1_REGCNT = 0;
               TIMER2_REGCNT = 0;
               DMA[DMA_CHANNEL_1].cnt = 0;
           
+              // Reset FIFO exactly at the hand-off so queued bytes from the old song
+              // cannot leak into the new song.
               REG_SOUNDCNT_H |= SOUND_A_RIGHT_CHANNEL | SOUND_A_LEFT_CHANNEL | SOUND_A_FIFO_RESET;
               DMA[DMA_CHANNEL_1].src = trackData(currentTrack);
               DMA[DMA_CHANNEL_1].dst = SOUND_A_FIFO_BUFFER;
               DMA[DMA_CHANNEL_1].cnt = DMA_ON | DMA_DESTINATION_FIXED | DMA_32 | DMA_REPEAT | DMA_AT_REFRESH;
           
-              TIMER1_REGDATA = 0;
-              TIMER2_REGDATA = (unsigned short)(65536u - blocks);
-              TIMER1_REGCNT = TIMER_ENABLE | TIMER_CASCADE;
-              TIMER2_REGCNT = TIMER_ENABLE | TIMER_CASCADE | TIMER_INTERRUPT;
-              REG_IE |= IRQ_TIMER2;
+              musicBaseSamples = 0;
+              musicFullBlocksRemaining = bytes >> 16;
+              musicRemainder = bytes & 0xFFFFu;
+              musicFinalPartial = 0;
+              musicTimerStart = 0;
+          
+              // TIMER1 is the exact song-length clock. Full 65536-sample chunks use
+              // a zero reload. The final partial chunk gets its own precise reload,
+              // eliminating the old ceil-to-65536 overrun that caused the end glitch.
+              if (musicFullBlocksRemaining == 0u) {
+                  musicFinalPartial = 1;
+                  musicTimerStart = 65536u - musicRemainder;
+                  TIMER1_REGDATA = (unsigned short)musicTimerStart;
+              } else {
+                  TIMER1_REGDATA = 0;
+              }
+              TIMER1_REGCNT = TIMER_ENABLE | TIMER_CASCADE | TIMER_INTERRUPT;
+              REG_IE |= IRQ_TIMER1;
               REG_IME = 1;
               musicPlaying = 1;
           }
@@ -966,23 +1009,22 @@ jobs:
               int track = currentTrack;
               const signed char *data = (const signed char *)trackData(track);
               unsigned int bytes = trackBytes(track);
-              unsigned int blocks = trackBlocks(track);
-              if (!data || bytes == 0u || blocks == 0u)
+              if (!data || bytes == 0u)
                   return 6;
           
-              unsigned int blockBase = 65536u - blocks;
-              unsigned int block = ((unsigned int)TIMER2_REGDATA - blockBase) & 0xFFFFu;
-              if (block >= blocks)
-                  block = 0;
-              unsigned int pos = block * 65536u + (unsigned int)TIMER1_REGDATA;
+              unsigned int base = musicBaseSamples;
+              unsigned int timerStart = musicTimerStart;
+              unsigned int timerNow = (unsigned int)TIMER1_REGDATA;
+              unsigned int within = (timerNow - timerStart) & 0xFFFFu;
+              unsigned int pos = base + within;
               if (pos >= bytes)
-                  pos %= bytes;
+                  pos = bytes - 1u;
           
               int total = 0;
               for (int i = 0; i < 8; i++) {
                   unsigned int at = pos + (unsigned int)(i * 97);
                   if (at >= bytes)
-                      at %= bytes;
+                      at = bytes - 1u;
                   int v = (int)data[at];
                   total += v < 0 ? -v : v;
               }
@@ -994,7 +1036,7 @@ jobs:
           
           void __attribute__ ((target("arm"))) play_typeA(void) {
               startCurrentTrackHardware();
-              REG_IF = IRQ_TIMER2;
+              REG_IF = IRQ_TIMER1;
           }
           
           void __attribute__ ((target("arm"))) stop_sfx(void) {
@@ -1004,16 +1046,47 @@ jobs:
               TIMER3_REGCNT = 0;
           }
           
-          void __attribute__ ((target("arm"))) interrupt(void) {
-              if (REG_IF & IRQ_TIMER3)
-                  stop_sfx();
+          static void advanceMusicClock(void) {
+              if (!musicPlaying)
+                  return;
           
-              if (REG_IF & IRQ_TIMER2) {
+              if (musicFinalPartial) {
                   TIMER1_REGCNT = 0;
-                  TIMER2_REGCNT = 0;
+                  DMA[DMA_CHANNEL_1].cnt = 0;
                   chooseNextTrack();
                   startCurrentTrackHardware();
-                  REG_IF = IRQ_TIMER2;
+                  return;
+              }
+          
+              musicBaseSamples += 65536u;
+              if (musicFullBlocksRemaining > 0u)
+                  --musicFullBlocksRemaining;
+          
+              if (musicFullBlocksRemaining == 0u) {
+                  if (musicRemainder != 0u) {
+                      musicFinalPartial = 1;
+                      musicTimerStart = 65536u - musicRemainder;
+                      TIMER1_REGDATA = (unsigned short)musicTimerStart;
+                  } else {
+                      TIMER1_REGCNT = 0;
+                      DMA[DMA_CHANNEL_1].cnt = 0;
+                      chooseNextTrack();
+                      startCurrentTrackHardware();
+                  }
+              } else {
+                  musicTimerStart = 0;
+                  TIMER1_REGDATA = 0;
+              }
+          }
+          
+          void __attribute__ ((target("arm"))) interrupt(void) {
+              unsigned short flags = REG_IF;
+              if (flags & IRQ_TIMER3)
+                  stop_sfx();
+          
+              if (flags & IRQ_TIMER1) {
+                  REG_IF = IRQ_TIMER1;
+                  advanceMusicClock();
               }
           }
           
@@ -1356,7 +1429,10 @@ jobs:
           grep -n "audio_music_level" audio.c audio.h game.c
           grep -n "chooseNextTrack" audio.c
           grep -n "usurper_loopBlocks" assets/usurper.h audio.c
-          grep -n "propagation_loopBlocks" assets/propagation.h audio.c
+          grep -n "propagation_loopBlocks" assets/propagation.h
+          grep -n "IRQ_TIMER1" audio.c
+          grep -n "musicFullBlocksRemaining" audio.c
+          grep -n "musicFinalPartial" audio.c
 
       - name: Build ROM
         run: make
@@ -1364,15 +1440,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
           name: Sandtris-Miyoo-v0.4.0-Music-Library-FIX1
-          path: "Sandtris - Miyoo Edition v0.4.0 Music Library FIX1.gba"
+          path: "Sandtris - Miyoo Edition v0.4.0 Music Library FIX2.gba"
           if-no-files-found: error
