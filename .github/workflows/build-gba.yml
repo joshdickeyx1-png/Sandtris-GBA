@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.7.0 Cosmic Chaos
+name: Build Sandtris Miyoo Edition v0.7.0 FIX1 Cosmic Chaos
 
 on:
   push:
@@ -2494,15 +2494,18 @@ jobs:
           if n1 != 1 or n2 != 1:
               raise SystemExit(f'ERROR: Cosmic Chaos navigation patch failed ({n1},{n2}).')
 
-          branch='                      } else if (menuSelection == 7) {\n'
-          if branch not in s:
+          # Slot 7 was the Visualizer in v0.6.0. Match it by syntax rather than
+          # hard-coded whitespace because earlier patch stages can change indentation.
+          m = re.search(r'(?m)^([ \t]*)}\s*else if \(menuSelection == 7\) \{\s*$', s)
+          if not m:
               raise SystemExit('ERROR: Visualizer slot 7 branch missing.')
-          chaos = ('                      } else if (menuSelection == 7) {\n'
-                   '                          cosmicChaosEnabled = !cosmicChaosEnabled;\n'
-                   '                          saveData();\n'
-                   '                          titleDirty = 1;\n'
-                   '                      } else if (menuSelection == 8) {\n')
-          s=s.replace(branch,chaos,1)
+          indent = m.group(1)
+          chaos = (indent + '} else if (menuSelection == 7) {\n'
+                   + indent + '    cosmicChaosEnabled = !cosmicChaosEnabled;\n'
+                   + indent + '    saveData();\n'
+                   + indent + '    titleDirty = 1;\n'
+                   + indent + '} else if (menuSelection == 8) {')
+          s = s[:m.start()] + chaos + s[m.end():]
 
           s=s.replace('MIYOO EDITION v0.6.0 FIX3','MIYOO EDITION v0.7.0')
           for g in ('SRAM8[27]','COSMIC CHAOS: %s','score >= 2500','score >= 5000','score >= 10000','MIYOO EDITION v0.7.0'):
@@ -2526,15 +2529,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos FIX1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos FIX1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos FIX1.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos FIX1.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
           name: Sandtris-Miyoo-v0.7.0-Cosmic-Chaos
-          path: "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
+          path: "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos FIX1.gba"
           if-no-files-found: error
