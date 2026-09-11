@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.5.1 FIX3 Gravity Shift Tuning
+name: Build Sandtris Miyoo Edition v0.6.0 Anomaly Boss Mode
 
 on:
   push:
@@ -1754,21 +1754,295 @@ jobs:
           grep -n "SRAM8\[25\]" game.c
           grep -n "MIYOO EDITION v0.5.1" game.c
 
+      - name: Apply v0.6.0 Anomaly Boss Mode
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('game.c')
+          s = p.read_text()
+
+          def function_span(src, name):
+              pat = re.compile(r'(?m)^static\s+(?:void|int|char\s*\*)\s+' + re.escape(name) + r'\s*\([^\n]*\)\s*\{')
+              m = pat.search(src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() definition not found.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found.')
+
+          def replace_function(src, name, replacement):
+              a, b = function_span(src, name)
+              return src[:a] + replacement + src[b:]
+
+          # Persistent toggle. Bytes 24 and 25 are Music Library and Gravity Shift.
+          gravity_global = 'static int gravityNextDir = 1;'
+          if gravity_global not in s:
+              raise SystemExit('ERROR: v0.5.1 gravity globals not found.')
+          if 'static int anomalyModeEnabled = 0;' not in s:
+              s = s.replace(gravity_global, gravity_global + r'''
+          static int anomalyModeEnabled = 0;
+          static int anomalyState = 0;
+          static int anomalyType = 0;
+          static int anomalyFrame = 0;
+          static int anomalyNextScore = 5000;
+          static int anomalySerial = 0;''', 1)
+
+          save_pat = re.compile(r'(?m)^(\s*SRAM8\[25\]\s*=\s*\(u8\)\(gravityModeEnabled\s*\?\s*1\s*:\s*0\);\s*)$')
+          s, n = save_pat.subn(r'\1\n    SRAM8[26] = (u8)(anomalyModeEnabled ? 1 : 0);', s, count=1)
+          if n != 1:
+              raise SystemExit('ERROR: Gravity SRAM save line not found.')
+
+          load_pat = re.compile(r'(?m)^(\s*gravityModeEnabled\s*=\s*SRAM8\[25\]\s*<=\s*1\s*\?\s*SRAM8\[25\]\s*:\s*0;\s*)$')
+          s, n = load_pat.subn(r'\1\n        anomalyModeEnabled = SRAM8[26] <= 1 ? SRAM8[26] : 0;', s, count=1)
+          if n != 1:
+              raise SystemExit('ERROR: Gravity SRAM load line not found.')
+
+          default_pat = re.compile(r'(?m)^(\s*gravityModeEnabled\s*=\s*0;\s*)$')
+          s, n = default_pat.subn(r'\1\n        anomalyModeEnabled = 0;', s, count=1)
+          if n != 1:
+              raise SystemExit('ERROR: Gravity default line not found.')
+
+          # Reset encounter progression for every new run.
+          reset_anchor = '    gravityNextDir = 1;'
+          if reset_anchor not in s:
+              raise SystemExit('ERROR: Gravity init reset not found.')
+          s = s.replace(reset_anchor, reset_anchor + r'''
+          anomalyState = 0;
+          anomalyType = 0;
+          anomalyFrame = 0;
+          anomalyNextScore = 5000;
+          anomalySerial = 0;''', 1)
+
+          # Prototypes before drawPiece() so the HUD can be called safely.
+          proto_anchor = 'static void updateWorldGravity(void);'
+          if proto_anchor not in s:
+              raise SystemExit('ERROR: Gravity prototype not found.')
+          s = s.replace(proto_anchor, proto_anchor + r'''
+          static void drawAnomalyHUD(void);
+          static void updateWorldAnomaly(void);''', 1)
+
+          # Keep the anomaly display in the safe left-side HUD region.
+          hud_anchor = '    drawGravityHUD();'
+          if hud_anchor not in s:
+              raise SystemExit('ERROR: Gravity HUD draw call not found.')
+          s = s.replace(hud_anchor, hud_anchor + '\n    drawAnomalyHUD();', 1)
+
+          marker = 'int updatePiece(void) {'
+          if marker not in s:
+              raise SystemExit('ERROR: updatePiece marker not found.')
+
+          helpers = r'''static char *anomalyName(void) {
+              if (anomalyType == 0) return "BLACK HOLE";
+              if (anomalyType == 1) return "SUPERNOVA";
+              return "TIME RIFT";
+          }
+
+          static void drawAnomalyHUD(void) {
+              if (!anomalyModeEnabled || anomalyState == 0) return;
+              drawRectDMA(118, 1, 47, 23, COL_BLACK);
+              if (anomalyState == 1) {
+                  drawString(119, 2, "ANOMALY!", COL_YELLOW);
+                  drawString(128, 2, anomalyName(), COL_WHITE);
+                  int w = (anomalyFrame * 42) / 120;
+                  if (w < 0) w = 0; if (w > 42) w = 42;
+                  drawRectDMA(139, 2, 42, 3, COL_WHITE);
+                  drawRectDMA(139, 2, w, 3, COL_YELLOW);
+              } else {
+                  drawString(119, 2, anomalyName(), COL_YELLOW);
+                  int remain = 300 - anomalyFrame;
+                  if (remain < 0) remain = 0;
+                  int w = (remain * 42) / 300;
+                  drawRectDMA(134, 2, 42, 3, COL_WHITE);
+                  drawRectDMA(134, 2, w, 3, COL_YELLOW);
+              }
+          }
+
+          static void anomalyPullBlackHole(void) {
+              // Pull horizontally toward the board center. Horizontal-only attraction
+              // keeps the encounter dramatic without forcing sand into the spawn ceiling.
+              const int cx = (BOARD_WIDTH + 1) / 2;
+              if (anomalyFrame & 1) return;
+              for (int y = 24; y < BOARD_HEIGHT - 1; y++) {
+                  for (int x = 1; x < cx; x++)
+                      gravityMoveCell(y, x, 0, 1, 1, 0);
+                  for (int x = BOARD_WIDTH; x > cx; x--)
+                      gravityMoveCell(y, x, 0, -1, 1, 0);
+              }
+              gravityWakeChunks();
+          }
+
+          static void anomalySupernovaPulse(void) {
+              // Repeated outward shockwaves shove grains away from the center column.
+              // Nothing is pushed upward, so the event cannot create a fake top-out.
+              if ((anomalyFrame % 10) != 0) return;
+              const int cx = (BOARD_WIDTH + 1) / 2;
+              int radius = 2 + ((anomalyFrame / 10) % 10);
+              int left = cx - radius;
+              int right = cx + radius;
+              if (left < 1) left = 1;
+              if (right > BOARD_WIDTH) right = BOARD_WIDTH;
+              for (int y = 32; y < BOARD_HEIGHT - 1; y++) {
+                  if (left > 1) gravityMoveCell(y, left, 0, -1, 1, 0);
+                  if (right < BOARD_WIDTH) gravityMoveCell(y, right, 0, 1, 1, 0);
+              }
+              gravityWakeChunks();
+          }
+
+          static void finishAnomaly(void) {
+              anomalyState = 0;
+              anomalyFrame = 0;
+              anomalySerial++;
+              anomalyType = anomalySerial % 3;
+              anomalyNextScore += 5000;
+              score += 750;
+              gravityWakeChunks();
+          }
+
+          static void updateWorldAnomaly(void) {
+              if (!anomalyModeEnabled) {
+                  updateWorldGravity();
+                  return;
+              }
+
+              if (anomalyState == 0 && score >= anomalyNextScore) {
+                  anomalyState = 1;
+                  anomalyFrame = 0;
+              }
+
+              if (anomalyState == 1) {
+                  // Two-second warning. Normal physics continue so the warning never freezes play.
+                  anomalyFrame++;
+                  updateWorldGravity();
+                  if (anomalyFrame >= 120) {
+                      anomalyState = 2;
+                      anomalyFrame = 0;
+                      gravityWakeChunks();
+                  }
+                  return;
+              }
+
+              if (anomalyState == 2) {
+                  anomalyFrame++;
+                  if (anomalyType == 0) {
+                      updateWorldGravity();
+                      anomalyPullBlackHole();
+                  } else if (anomalyType == 1) {
+                      updateWorldGravity();
+                      anomalySupernovaPulse();
+                  } else {
+                      // Time Rift: loose-sand simulation moves at one-third speed while
+                      // player input, the falling piece, and the soundtrack stay responsive.
+                      if ((anomalyFrame % 3) == 0)
+                          updateWorldGravity();
+                  }
+                  if (anomalyFrame >= 300)
+                      finishAnomaly();
+                  return;
+              }
+
+              updateWorldGravity();
+          }
+
+          '''
+          s = s.replace(marker, helpers + marker, 1)
+
+          # Route only the gameplay physics call through the anomaly controller.
+          gameplay_call = '        updateWorldGravity();'
+          if gameplay_call not in s:
+              raise SystemExit('ERROR: gameplay Gravity update call not found.')
+          s = s.replace(gameplay_call, '        updateWorldAnomaly();', 1)
+
+          # Nine-row title menu: Anomaly Mode is its own persistent mode.
+          title_menu = r'''static void drawTitleMenu(void) {
+              waitForVBlank();
+              if (!titleBackgroundDrawn) {
+                  drawFullScreenImageDMA(title);
+                  titleBackgroundDrawn = 1;
+                  drawCenteredShadowString(21, 38, 164, 8, "MIYOO EDITION v0.6.0", COL_WHITE);
+              }
+              for (int y = 33; y <= 151; y += 13) restoreTitleStrip(y, 44, 188, 11);
+              char line[38];
+              char *diffName = difficulty == 0 ? "EASY" : (difficulty == 1 ? "NORMAL" : "HARD");
+              snprintf(line,sizeof(line),"%c START GAME",menuSelection==0?'>':' '); drawShadowString(36,48,line,menuSelection==0?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c DIFFICULTY: %s",menuSelection==1?'>':' ',diffName); drawShadowString(49,48,line,menuSelection==1?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC: %s",menuSelection==2?'>':' ',musicModeShortName()); drawShadowString(62,48,line,menuSelection==2?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ELEMENTS: %s",menuSelection==3?'>':' ',elementsEnabled?"ON":"OFF"); drawShadowString(75,48,line,menuSelection==3?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC MODE: %s",menuSelection==4?'>':' ',cosmicEnabled?"ON":"OFF"); drawShadowString(88,48,line,menuSelection==4?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c GRAVITY SHIFT: %s",menuSelection==5?'>':' ',gravityModeEnabled?"ON":"OFF"); drawShadowString(101,48,line,menuSelection==5?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ANOMALY MODE: %s",menuSelection==6?'>':' ',anomalyModeEnabled?"ON":"OFF"); drawShadowString(114,48,line,menuSelection==6?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC VISUALIZER",menuSelection==7?'>':' '); drawShadowString(127,48,line,menuSelection==7?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c HIGH SCORES",menuSelection==8?'>':' '); drawShadowString(140,48,line,menuSelection==8?COL_YELLOW:COL_WHITE);
+          }'''
+          s = replace_function(s, 'drawTitleMenu', title_menu)
+
+          # Navigation 8 -> 9 choices.
+          s, n1 = re.subn(r'menuSelection = \(menuSelection \+ 7\) % 8;', 'menuSelection = (menuSelection + 8) % 9;', s, count=1)
+          s, n2 = re.subn(r'menuSelection = \(menuSelection \+ 1\) % 8;', 'menuSelection = (menuSelection + 1) % 9;', s, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f'ERROR: title navigation patch failed ({n1},{n2}).')
+
+          # Slot 6 becomes Anomaly; existing Visualizer moves to slot 7.
+          visualizer_branch = '            } else if (menuSelection == 6) {\n'
+          if visualizer_branch not in s:
+              raise SystemExit('ERROR: v0.5.1 Visualizer branch not found.')
+          anomaly_branch = r'''            } else if (menuSelection == 6) {
+                          anomalyModeEnabled = !anomalyModeEnabled;
+                          saveData();
+                          titleDirty = 1;
+                      } else if (menuSelection == 7) {
+          '''
+          s = s.replace(visualizer_branch, anomaly_branch, 1)
+
+          # Version marker should now only advertise v0.6.0 on the title screen.
+          s = s.replace('MIYOO EDITION v0.5.1', 'MIYOO EDITION v0.6.0')
+
+          guards = (
+              'SRAM8[26]', 'ANOMALY MODE: %s', 'updateWorldAnomaly();',
+              'BLACK HOLE', 'SUPERNOVA', 'TIME RIFT', 'anomalyNextScore = 5000',
+              'score += 750', 'MIYOO EDITION v0.6.0'
+          )
+          for g in guards:
+              if g not in s:
+                  raise SystemExit('ERROR: v0.6.0 guard missing: ' + g)
+
+          p.write_text(s)
+          print('Applied v0.6.0 Anomaly/Boss Mode: Black Hole, Supernova, Time Rift')
+          PY
+
+      - name: Verify v0.6.0 Anomaly Boss Mode
+        run: |
+          grep -n "ANOMALY MODE" game.c
+          grep -n "updateWorldAnomaly" game.c
+          grep -n "BLACK HOLE" game.c
+          grep -n "SUPERNOVA" game.c
+          grep -n "TIME RIFT" game.c
+          grep -n "SRAM8\[26\]" game.c
+          grep -n "MIYOO EDITION v0.6.0" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.5.1-Gravity-Shift-FIX3-Tuned
-          path: "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
+          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode
+          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode.gba"
           if-no-files-found: error
