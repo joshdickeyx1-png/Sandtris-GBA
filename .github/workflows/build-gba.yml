@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.6.0 FIX3 Visible Anomaly Bosses
+name: Build Sandtris Miyoo Edition v0.7.0 Cosmic Chaos
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install ARM toolchain
         run: |
@@ -2400,21 +2400,141 @@ jobs:
           grep -n "anomalyTimeRiftPulse" game.c
           grep -n "MIYOO EDITION v0.6.0 FIX3" game.c
 
+      - name: Apply v0.7.0 Cosmic Chaos Mode
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('game.c')
+          s = p.read_text()
+
+          def function_span(src, name):
+              m = re.search(r'(?m)^static\s+void\s+' + re.escape(name) + r'\s*\([^\n]*\)\s*\{', src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() not found for Cosmic Chaos.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found.')
+
+          def replace_function(src, name, replacement):
+              a,b = function_span(src,name)
+              return src[:a] + replacement + src[b:]
+
+          anchor = 'static int anomalyModeEnabled = 0;'
+          if anchor not in s:
+              raise SystemExit('ERROR: anomaly mode global missing.')
+          if 'static int cosmicChaosEnabled = 0;' not in s:
+              s = s.replace(anchor, anchor + '\nstatic int cosmicChaosEnabled = 0;', 1)
+
+          save = '    SRAM8[26] = (u8)(anomalyModeEnabled ? 1 : 0);'
+          load = '        anomalyModeEnabled = SRAM8[26] <= 1 ? SRAM8[26] : 0;'
+          default = '        anomalyModeEnabled = 0;'
+          if save not in s or load not in s or default not in s:
+              raise SystemExit('ERROR: anomaly SRAM anchors missing.')
+          s=s.replace(save, save+'\n    SRAM8[27] = (u8)(cosmicChaosEnabled ? 1 : 0);',1)
+          s=s.replace(load, load+'\n        cosmicChaosEnabled = SRAM8[27] <= 1 ? SRAM8[27] : 0;',1)
+          s=s.replace(default, default+'\n        cosmicChaosEnabled = 0;',1)
+
+          old='if (difficulty != 2 || !elementsEnabled)'
+          if old not in s:
+              raise SystemExit('ERROR: Elements enable gate not found.')
+          s=s.replace(old, 'if (difficulty != 2 || (!elementsEnabled && !(cosmicChaosEnabled && score >= 2500)))', 1)
+
+          gcount=0
+          for old,new in [
+              ('if (!gravityModeEnabled) return;', 'if (!gravityModeEnabled && !(cosmicChaosEnabled && score >= 5000)) return;'),
+              ('if (!gravityModeEnabled) { updateWorld(); return; }', 'if (!gravityModeEnabled && !(cosmicChaosEnabled && score >= 5000)) { updateWorld(); return; }')]:
+              c=s.count(old); gcount += c; s=s.replace(old,new)
+          if gcount < 2:
+              raise SystemExit(f'ERROR: Gravity gates not fully found ({gcount}).')
+
+          acount=0
+          for old,new in [
+              ('if (!anomalyModeEnabled || anomalyState == 0) return;', 'if ((!anomalyModeEnabled && !(cosmicChaosEnabled && score >= 10000)) || anomalyState == 0) return;'),
+              ('if (!anomalyModeEnabled) { updateWorldGravity(); return; }', 'if (!anomalyModeEnabled && !(cosmicChaosEnabled && score >= 10000)) { updateWorldGravity(); return; }')]:
+              c=s.count(old); acount += c; s=s.replace(old,new)
+          if acount < 2:
+              raise SystemExit(f'ERROR: Anomaly gates not fully found ({acount}).')
+
+          s=s.replace('if (cosmicEnabled) {', 'if (cosmicEnabled || cosmicChaosEnabled) {')
+          s=s.replace('if (cosmicEnabled)', 'if (cosmicEnabled || cosmicChaosEnabled)')
+
+          title = '''static void drawTitleMenu(void) {
+              waitForVBlank();
+              if (!titleBackgroundDrawn) {
+                  drawFullScreenImageDMA(title);
+                  titleBackgroundDrawn = 1;
+                  drawCenteredShadowString(17, 38, 164, 8, "MIYOO EDITION v0.7.0", COL_WHITE);
+              }
+              for (int y = 28; y <= 151; y += 12) restoreTitleStrip(y, 42, 194, 10);
+              char line[38];
+              char *diffName = difficulty == 0 ? "EASY" : (difficulty == 1 ? "NORMAL" : "HARD");
+              snprintf(line,sizeof(line),"%c START GAME",menuSelection==0?'>':' '); drawShadowString(30,46,line,menuSelection==0?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c DIFFICULTY: %s",menuSelection==1?'>':' ',diffName); drawShadowString(42,46,line,menuSelection==1?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC: %s",menuSelection==2?'>':' ',musicModeShortName()); drawShadowString(54,46,line,menuSelection==2?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ELEMENTS: %s",menuSelection==3?'>':' ',elementsEnabled?"ON":"OFF"); drawShadowString(66,46,line,menuSelection==3?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC MODE: %s",menuSelection==4?'>':' ',cosmicEnabled?"ON":"OFF"); drawShadowString(78,46,line,menuSelection==4?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c GRAVITY SHIFT: %s",menuSelection==5?'>':' ',gravityModeEnabled?"ON":"OFF"); drawShadowString(90,46,line,menuSelection==5?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ANOMALY MODE: %s",menuSelection==6?'>':' ',anomalyModeEnabled?"ON":"OFF"); drawShadowString(102,46,line,menuSelection==6?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC CHAOS: %s",menuSelection==7?'>':' ',cosmicChaosEnabled?"ON":"OFF"); drawShadowString(114,46,line,menuSelection==7?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC VISUALIZER",menuSelection==8?'>':' '); drawShadowString(126,46,line,menuSelection==8?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c HIGH SCORES",menuSelection==9?'>':' '); drawShadowString(138,46,line,menuSelection==9?COL_YELLOW:COL_WHITE);
+          }'''
+          s=replace_function(s,'drawTitleMenu',title)
+
+          s,n1=re.subn(r'menuSelection = \(menuSelection \+ 8\) % 9;', 'menuSelection = (menuSelection + 9) % 10;', s, count=1)
+          s,n2=re.subn(r'menuSelection = \(menuSelection \+ 1\) % 9;', 'menuSelection = (menuSelection + 1) % 10;', s, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f'ERROR: Cosmic Chaos navigation patch failed ({n1},{n2}).')
+
+          branch='                      } else if (menuSelection == 7) {\n'
+          if branch not in s:
+              raise SystemExit('ERROR: Visualizer slot 7 branch missing.')
+          chaos = ('                      } else if (menuSelection == 7) {\n'
+                   '                          cosmicChaosEnabled = !cosmicChaosEnabled;\n'
+                   '                          saveData();\n'
+                   '                          titleDirty = 1;\n'
+                   '                      } else if (menuSelection == 8) {\n')
+          s=s.replace(branch,chaos,1)
+
+          s=s.replace('MIYOO EDITION v0.6.0 FIX3','MIYOO EDITION v0.7.0')
+          for g in ('SRAM8[27]','COSMIC CHAOS: %s','score >= 2500','score >= 5000','score >= 10000','MIYOO EDITION v0.7.0'):
+              if g not in s: raise SystemExit('ERROR: Cosmic Chaos guard missing: '+g)
+          p.write_text(s)
+          print('Applied v0.7.0 Cosmic Chaos progressive mode')
+          PY
+
+      - name: Verify v0.7.0 Cosmic Chaos Mode
+        run: |
+          grep -n "COSMIC CHAOS" game.c
+          grep -n "SRAM8\[27\]" game.c
+          grep -n "score >= 2500" game.c
+          grep -n "score >= 5000" game.c
+          grep -n "score >= 10000" game.c
+          grep -n "MIYOO EDITION v0.7.0" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX3
-          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
+          name: Sandtris-Miyoo-v0.7.0-Cosmic-Chaos
+          path: "Sandtris - Miyoo Edition v0.7.0 Cosmic Chaos.gba"
           if-no-files-found: error
