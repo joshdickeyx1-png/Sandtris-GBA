@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.6.0 FIX2 Anomaly Performance Tuning
+name: Build Sandtris Miyoo Edition v0.6.0 FIX3 Visible Anomaly Bosses
 
 on:
   push:
@@ -2208,21 +2208,213 @@ jobs:
           grep -n "anomalyFrame % 30" game.c
           grep -n "MIYOO EDITION v0.6.0 FIX2" game.c
 
+
+      - name: Apply v0.6.0 FIX3 visible bosses + stronger balanced effects
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('game.c')
+          s = p.read_text()
+
+          def function_span(src, name):
+              pat = re.compile(r'(?m)^static\s+(?:void|int|char\s*\*)\s+' + re.escape(name) + r'\s*\([^\n]*\)\s*\{')
+              m = pat.search(src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() not found for FIX3.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found for FIX3.')
+
+          def replace_function(src, name, body):
+              a,b = function_span(src,name)
+              return src[:a] + body + src[b:]
+
+          hud = r'''static void drawAnomalyEntity(void) {
+              if (!anomalyModeEnabled || anomalyState == 0) return;
+              const int top = 76;
+              const int left = 7;
+              const int cy = top + 16;
+              const int cx = left + 16;
+              drawRectDMA(top, left, 34, 34, COL_BLACK);
+
+              if (anomalyState == 1) {
+                  int pulse = 5 + ((anomalyFrame >> 3) & 3);
+                  for (int d = -pulse; d <= pulse; d++) {
+                      int ad = d < 0 ? -d : d;
+                      setPixel(cy - pulse + ad, cx + d, COL_YELLOW);
+                      setPixel(cy + pulse - ad, cx + d, COL_YELLOW);
+                  }
+                  setPixel(cy, cx, COL_WHITE);
+                  return;
+              }
+
+              if (anomalyType == 0) {
+                  int phase = (anomalyFrame >> 3) & 3;
+                  static const signed char ringX[24] = {0,3,6,8,9,8,6,3,0,-3,-6,-8,-9,-8,-6,-3,0,5,8,5,0,-5,-8,-5};
+                  static const signed char ringY[24] = {-9,-8,-6,-3,0,3,6,8,9,8,6,3,0,-3,-6,-8,-12,-10,0,10,12,10,0,-10};
+                  for (int i = 0; i < 24; i++) {
+                      int j = (i + phase) % 24;
+                      setPixel(cy + ringY[j], cx + ringX[j], (i & 1) ? COL_WHITE : COL_YELLOW);
+                  }
+                  for (int k = 0; k < 4; k++) {
+                      setPixel(cy, left + 1 + k * 3, COL_WHITE);
+                      setPixel(cy, left + 31 - k * 3, COL_WHITE);
+                  }
+              } else if (anomalyType == 1) {
+                  int r = 7 + ((anomalyFrame >> 3) & 3);
+                  for (int d = -r; d <= r; d++) {
+                      setPixel(cy, cx + d, (d & 1) ? COL_YELLOW : COL_WHITE);
+                      setPixel(cy + d, cx, (d & 1) ? COL_YELLOW : COL_WHITE);
+                  }
+                  for (int d = -r + 2; d <= r - 2; d += 2) {
+                      setPixel(cy + d, cx + d, COL_YELLOW);
+                      setPixel(cy + d, cx - d, COL_YELLOW);
+                  }
+              } else {
+                  int wobble = ((anomalyFrame >> 3) & 3) - 1;
+                  for (int y = -12; y <= 12; y++) {
+                      if ((y & 3) != 1) {
+                          setPixel(cy + y, cx - 5 + ((y + wobble) & 1), COL_WHITE);
+                          setPixel(cy + y, cx + 5 - ((y - wobble) & 1), COL_YELLOW);
+                      }
+                  }
+                  for (int x = -7; x <= 7; x += 2) {
+                      setPixel(cy - 11, cx + x, COL_YELLOW);
+                      setPixel(cy + 11, cx + x, COL_WHITE);
+                  }
+              }
+          }
+
+          static void drawAnomalyHUD(void) {
+              if (!anomalyModeEnabled || anomalyState == 0) return;
+              if ((anomalyFrame & 7) != 0 && anomalyFrame > 8) return;
+              drawAnomalyEntity();
+              if (anomalyState == 1) {
+                  drawString(119, 2, "ANOMALY!", COL_YELLOW);
+                  drawString(128, 2, anomalyName(), COL_WHITE);
+              } else {
+                  drawString(119, 2, anomalyName(), COL_YELLOW);
+              }
+          }'''
+          s = replace_function(s, 'drawAnomalyHUD', hud)
+
+          black = r'''static void anomalyPullBlackHole(void) {
+              if ((anomalyFrame % 4) != 0) return;
+              const int cx = (BOARD_WIDTH + 1) / 2;
+              int parity = (anomalyFrame >> 2) & 1;
+              for (int y = 28 + parity; y < BOARD_HEIGHT - 1; y += 2) {
+                  for (int x = 2; x < cx; x++)
+                      gravityMoveCell(y, x, 0, 1, 1, 0);
+                  for (int x = BOARD_WIDTH - 1; x > cx; x--)
+                      gravityMoveCell(y, x, 0, -1, 1, 0);
+              }
+          }'''
+          s = replace_function(s, 'anomalyPullBlackHole', black)
+
+          nova = r'''static void anomalySupernovaPulse(void) {
+              if ((anomalyFrame % 18) != 0) return;
+              const int cx = (BOARD_WIDTH + 1) / 2;
+              int radius = 2 + ((anomalyFrame / 18) % 11);
+              int left = cx - radius;
+              int right = cx + radius;
+              if (left < 2) left = 2;
+              if (right >= BOARD_WIDTH) right = BOARD_WIDTH - 1;
+              for (int y = 30; y < BOARD_HEIGHT - 1; y++) {
+                  if (left > 1) {
+                      gravityMoveCell(y, left, 0, -1, 1, 0);
+                      if (left + 1 < cx) gravityMoveCell(y, left + 1, 0, -1, 1, 0);
+                  }
+                  if (right < BOARD_WIDTH) {
+                      gravityMoveCell(y, right, 0, 1, 1, 0);
+                      if (right - 1 > cx) gravityMoveCell(y, right - 1, 0, 1, 1, 0);
+                  }
+              }
+          }'''
+          s = replace_function(s, 'anomalySupernovaPulse', nova)
+
+          finish_start, _ = function_span(s, 'finishAnomaly')
+          time_helper = r'''static void anomalyTimeRiftPulse(void) {
+              if ((anomalyFrame % 18) != 0) return;
+              int dir = ((anomalyFrame / 18) & 1) ? 1 : -1;
+              for (int y = 34; y < BOARD_HEIGHT - 1; y += 3) {
+                  if (dir < 0) {
+                      for (int x = 4; x < BOARD_WIDTH - 2; x += 4)
+                          gravityMoveCell(y, x, 0, -1, 1, 0);
+                  } else {
+                      for (int x = BOARD_WIDTH - 3; x > 2; x -= 4)
+                          gravityMoveCell(y, x, 0, 1, 1, 0);
+                  }
+              }
+          }
+
+          '''
+          s = s[:finish_start] + time_helper + s[finish_start:]
+
+          update = r'''static void updateWorldAnomaly(void) {
+              if (!anomalyModeEnabled) { updateWorldGravity(); return; }
+              if (anomalyState == 0 && score >= anomalyNextScore) { anomalyState = 1; anomalyFrame = 0; }
+              if (anomalyState == 1) {
+                  anomalyFrame++;
+                  updateWorldGravity();
+                  if (anomalyFrame >= 90) { anomalyState = 2; anomalyFrame = 0; gravityWakeChunks(); }
+                  return;
+              }
+              if (anomalyState == 2) {
+                  anomalyFrame++;
+                  if (anomalyType == 0) {
+                      if ((anomalyFrame & 1) == 0) updateWorldGravity();
+                      anomalyPullBlackHole();
+                  } else if (anomalyType == 1) {
+                      if ((anomalyFrame & 1) == 0) updateWorldGravity();
+                      anomalySupernovaPulse();
+                  } else {
+                      if ((anomalyFrame % 3) == 0) updateWorldGravity();
+                      anomalyTimeRiftPulse();
+                  }
+                  if (anomalyFrame >= 240) finishAnomaly();
+                  return;
+              }
+              updateWorldGravity();
+          }'''
+          s = replace_function(s, 'updateWorldAnomaly', update)
+          s = s.replace('MIYOO EDITION v0.6.0 FIX2', 'MIYOO EDITION v0.6.0 FIX3', 1)
+          for item in ('drawAnomalyEntity','anomalyFrame % 4','anomalyFrame % 18','anomalyTimeRiftPulse();','anomalyNextScore += 10000','MIYOO EDITION v0.6.0 FIX3'):
+              if item not in s:
+                  raise SystemExit('ERROR: FIX3 verification missing ' + item)
+          p.write_text(s)
+          print('Applied v0.6.0 FIX3 visible bosses and stronger balanced effects')
+          PY
+
+      - name: Verify v0.6.0 FIX3 visible anomaly bosses
+        run: |
+          grep -n "drawAnomalyEntity" game.c
+          grep -n "anomalyFrame % 4" game.c
+          grep -n "anomalyFrame % 18" game.c
+          grep -n "anomalyTimeRiftPulse" game.c
+          grep -n "MIYOO EDITION v0.6.0 FIX3" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX2
-          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
+          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX3
+          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
           if-no-files-found: error
