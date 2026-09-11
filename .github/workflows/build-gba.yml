@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.5.1 Gravity Shift Tuning
+name: Build Sandtris Miyoo Edition v0.5.1 FIX1 Gravity Shift Tuning
 
 on:
   push:
@@ -1662,7 +1662,23 @@ jobs:
               raise SystemExit('ERROR: gravity init reset not found for v0.5.1 tuning.')
           s = s.replace(old, new, 1)
 
-          pattern = re.compile(r'static void updateWorldGravity\(void\) \{.*?\n          \}\n\n', re.DOTALL)
+          # Locate the generated v0.5.0 function with brace matching instead of indentation.
+          signature = 'static void updateWorldGravity(void) {'
+          start = s.find(signature)
+          if start < 0:
+              raise SystemExit('ERROR: updateWorldGravity() start not found for v0.5.1.')
+          brace = s.find('{', start)
+          depth = 0
+          end = None
+          for i in range(brace, len(s)):
+              if s[i] == '{': depth += 1
+              elif s[i] == '}':
+                  depth -= 1
+                  if depth == 0:
+                      end = i + 1
+                      break
+          if end is None:
+              raise SystemExit('ERROR: updateWorldGravity() closing brace not found for v0.5.1.')
           replacement = r'''static void updateWorldGravity(void) {
               if (!gravityModeEnabled) { updateWorld(); return; }
 
@@ -1707,9 +1723,7 @@ jobs:
           }
 
           '''
-          s, n = pattern.subn(replacement, s, count=1)
-          if n != 1:
-              raise SystemExit('ERROR: Could not replace updateWorldGravity() for v0.5.1.')
+          s = s[:start] + replacement + s[end:]
 
           s = s.replace('MIYOO EDITION v0.5.0', 'MIYOO EDITION v0.5.1', 1)
           for g in ('GRAVITY_REST_FRAMES = 900','GRAVITY_BURST_FRAMES = 180','GRAVITY_UP_SAFE_ROW = 16','gravityNextDir = 1','MIYOO EDITION v0.5.1'):
@@ -1744,6 +1758,6 @@ jobs:
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.5.1-Gravity-Shift-Tuned
+          name: Sandtris-Miyoo-v0.5.1-Gravity-Shift-FIX1-Tuned
           path: "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned.gba"
           if-no-files-found: error
