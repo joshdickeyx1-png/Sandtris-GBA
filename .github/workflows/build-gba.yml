@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.5.1 FIX2 Gravity Shift Tuning
+name: Build Sandtris Miyoo Edition v0.5.1 FIX3 Gravity Shift Tuning
 
 on:
   push:
@@ -1682,26 +1682,37 @@ jobs:
           replacement = r'''static void updateWorldGravity(void) {
               if (!gravityModeEnabled) { updateWorld(); return; }
 
-              enum { GRAVITY_REST_FRAMES = 900, GRAVITY_BURST_FRAMES = 180,
-                     GRAVITY_WARNING_FRAMES = 90, GRAVITY_UP_SAFE_ROW = 24 };
-              const int cycleFrames = GRAVITY_REST_FRAMES + GRAVITY_BURST_FRAMES;
+              enum { GRAVITY_REST_FRAMES = 900,
+                     GRAVITY_SIDE_BURST_FRAMES = 180,
+                     GRAVITY_UP_BURST_FRAMES = 120,
+                     GRAVITY_WARNING_FRAMES = 90,
+                     GRAVITY_UP_SAFE_ROW = 24 };
 
               gravityFrame++;
-              int phase = (gravityFrame - 1) % cycleFrames;
 
-              if (phase < GRAVITY_REST_FRAMES) {
-                  gravityDir = 0;
-                  gravityWarning = (phase >= GRAVITY_REST_FRAMES - GRAVITY_WARNING_FRAMES);
-                  updateWorld();
-                  return;
-              }
-
-              gravityWarning = 0;
-              if (phase == GRAVITY_REST_FRAMES) {
-                  gravityDir = gravityNextDir;
-                  gravityNextDir++;
-                  if (gravityNextDir > 3) gravityNextDir = 1;
-                  gravityWakeChunks();
+              if (gravityDir == 0) {
+                  gravityWarning = (gravityFrame >= GRAVITY_REST_FRAMES - GRAVITY_WARNING_FRAMES);
+                  if (gravityFrame >= GRAVITY_REST_FRAMES) {
+                      gravityDir = gravityNextDir;
+                      gravityNextDir++;
+                      if (gravityNextDir > 3) gravityNextDir = 1;
+                      gravityFrame = 0;
+                      gravityWarning = 0;
+                      gravityWakeChunks();
+                  } else {
+                      updateWorld();
+                      return;
+                  }
+              } else {
+                  const int burstFrames = (gravityDir == 2) ? GRAVITY_UP_BURST_FRAMES : GRAVITY_SIDE_BURST_FRAMES;
+                  gravityWarning = 0;
+                  if (gravityFrame >= burstFrames) {
+                      gravityDir = 0;
+                      gravityFrame = 0;
+                      gravityWakeChunks();
+                      updateWorld();
+                      return;
+                  }
               }
 
               if (gravityFrame & 1) return;
@@ -1726,11 +1737,11 @@ jobs:
           s = s[:start] + replacement + s[end:]
 
           s = s.replace('MIYOO EDITION v0.5.0', 'MIYOO EDITION v0.5.1', 1)
-          for g in ('GRAVITY_REST_FRAMES = 900','GRAVITY_BURST_FRAMES = 180','GRAVITY_UP_SAFE_ROW = 24','gravityNextDir = 1','MIYOO EDITION v0.5.1'):
+          for g in ('GRAVITY_REST_FRAMES = 900','GRAVITY_SIDE_BURST_FRAMES = 180','GRAVITY_UP_BURST_FRAMES = 120','GRAVITY_UP_SAFE_ROW = 24','gravityNextDir = 1','MIYOO EDITION v0.5.1'):
               if g not in s:
                   raise SystemExit('ERROR: v0.5.1 guard missing: ' + g)
           p.write_text(s)
-          print('Applied v0.5.1 FIX2 Gravity Shift tuning (24px UP safety ceiling)')
+          print('Applied v0.5.1 FIX3 Gravity Shift tuning (UP 2s, LEFT/RIGHT 3s, 24px UP safety ceiling)')
           PY
 
       - name: Verify v0.5.1 Gravity Shift Mode
@@ -1749,15 +1760,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX2.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX2.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX2.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX2.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.5.1-Gravity-Shift-FIX2-Tuned
-          path: "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX2.gba"
+          name: Sandtris-Miyoo-v0.5.1-Gravity-Shift-FIX3-Tuned
+          path: "Sandtris - Miyoo Edition v0.5.1 Gravity Shift Tuned FIX3.gba"
           if-no-files-found: error
