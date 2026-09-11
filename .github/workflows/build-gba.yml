@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.6.0 FIX1 Anomaly Boss Mode
+name: Build Sandtris Miyoo Edition v0.6.0 FIX2 Anomaly Performance Tuning
 
 on:
   push:
@@ -2101,21 +2101,128 @@ jobs:
           grep -n "if (w < 0) w = 0;" game.c
           grep -n "if (w > 42) w = 42;" game.c
 
+      - name: Apply v0.6.0 FIX2 anomaly performance tuning
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('game.c')
+          s = p.read_text()
+          def function_span(src, name):
+              pat = re.compile(r'(?m)^static\s+(?:void|int|char\s*\*)\s+' + re.escape(name) + r'\s*\([^\n]*\)\s*\{')
+              m = pat.search(src)
+              if not m: raise SystemExit(f'ERROR: {name}() not found for FIX2.')
+              brace = src.find('{', m.start()); depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found for FIX2.')
+          def replace_function(src, name, body):
+              a,b=function_span(src,name); return src[:a]+body+src[b:]
+          s=s.replace('static int anomalyNextScore = 5000;','static int anomalyNextScore = 10000;',1)
+          s=s.replace('    anomalyNextScore = 5000;','    anomalyNextScore = 10000;',1)
+          hud = '''static void drawAnomalyHUD(void) {
+              if (!anomalyModeEnabled || anomalyState == 0) return;
+              if ((anomalyFrame & 7) != 0 && anomalyFrame > 8) return;
+              if (anomalyState == 1) {
+                  drawString(119, 2, "ANOMALY!", COL_YELLOW);
+                  drawString(128, 2, anomalyName(), COL_WHITE);
+              } else {
+                  drawString(119, 2, anomalyName(), COL_YELLOW);
+              }
+          }'''
+          s=replace_function(s,'drawAnomalyHUD',hud)
+          black = '''static void anomalyPullBlackHole(void) {
+              if ((anomalyFrame % 6) != 0) return;
+              const int cx = (BOARD_WIDTH + 1) / 2;
+              int parity = (anomalyFrame / 6) & 1;
+              for (int y = 28 + parity; y < BOARD_HEIGHT - 1; y += 2) {
+                  for (int x = 2; x < cx; x += 2) gravityMoveCell(y, x, 0, 1, 1, 0);
+                  for (int x = BOARD_WIDTH - 1; x > cx; x -= 2) gravityMoveCell(y, x, 0, -1, 1, 0);
+              }
+          }'''
+          s=replace_function(s,'anomalyPullBlackHole',black)
+          nova = '''static void anomalySupernovaPulse(void) {
+              if ((anomalyFrame % 30) != 0) return;
+              const int cx = (BOARD_WIDTH + 1) / 2;
+              int radius = 2 + ((anomalyFrame / 30) % 10);
+              int left = cx - radius, right = cx + radius;
+              if (left < 2) left = 2;
+              if (right >= BOARD_WIDTH) right = BOARD_WIDTH - 1;
+              int parity = (anomalyFrame / 30) & 1;
+              for (int y = 32 + parity; y < BOARD_HEIGHT - 1; y += 2) {
+                  if (left > 1) gravityMoveCell(y, left, 0, -1, 1, 0);
+                  if (right < BOARD_WIDTH) gravityMoveCell(y, right, 0, 1, 1, 0);
+              }
+          }'''
+          s=replace_function(s,'anomalySupernovaPulse',nova)
+          finish = '''static void finishAnomaly(void) {
+              anomalyState = 0; anomalyFrame = 0; anomalySerial++;
+              anomalyType = anomalySerial % 3;
+              anomalyNextScore += 10000;
+              score += 750;
+              gravityWakeChunks();
+          }'''
+          s=replace_function(s,'finishAnomaly',finish)
+          update = '''static void updateWorldAnomaly(void) {
+              if (!anomalyModeEnabled) { updateWorldGravity(); return; }
+              if (anomalyState == 0 && score >= anomalyNextScore) { anomalyState = 1; anomalyFrame = 0; }
+              if (anomalyState == 1) {
+                  anomalyFrame++; updateWorldGravity();
+                  if (anomalyFrame >= 90) { anomalyState = 2; anomalyFrame = 0; }
+                  return;
+              }
+              if (anomalyState == 2) {
+                  anomalyFrame++;
+                  if (anomalyType == 0) {
+                      if ((anomalyFrame & 1) == 0) updateWorldGravity();
+                      anomalyPullBlackHole();
+                  } else if (anomalyType == 1) {
+                      if ((anomalyFrame & 1) == 0) updateWorldGravity();
+                      anomalySupernovaPulse();
+                  } else {
+                      if ((anomalyFrame % 3) == 0) updateWorldGravity();
+                  }
+                  if (anomalyFrame >= 240) finishAnomaly();
+                  return;
+              }
+              updateWorldGravity();
+          }'''
+          s=replace_function(s,'updateWorldAnomaly',update)
+          s=s.replace('MIYOO EDITION v0.6.0','MIYOO EDITION v0.6.0 FIX2',1)
+          for c in ('anomalyNextScore = 10000','anomalyNextScore += 10000','anomalyFrame >= 240','anomalyFrame % 6','anomalyFrame % 30','MIYOO EDITION v0.6.0 FIX2'):
+              if c not in s: raise SystemExit('ERROR: FIX2 verification missing '+c)
+          p.write_text(s)
+          print('Applied v0.6.0 FIX2 performance tuning')
+          PY
+
+      - name: Verify v0.6.0 FIX2 anomaly tuning
+        run: |
+          grep -n "anomalyNextScore = 10000" game.c
+          grep -n "anomalyNextScore += 10000" game.c
+          grep -n "anomalyFrame >= 240" game.c
+          grep -n "anomalyFrame % 6" game.c
+          grep -n "anomalyFrame % 30" game.c
+          grep -n "MIYOO EDITION v0.6.0 FIX2" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v4
         with:
-          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX1
-          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX1.gba"
+          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX2
+          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX2.gba"
           if-no-files-found: error
