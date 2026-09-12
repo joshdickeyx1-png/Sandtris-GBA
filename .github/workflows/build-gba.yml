@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.6.0 FIX3 Visible Anomaly Bosses
+name: Build Sandtris Miyoo Edition v0.7.1 Four-Track Soundtrack
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install ARM toolchain
         run: |
@@ -837,7 +837,7 @@ jobs:
           grep -n "score >= 15000" game.c
           grep -n "SRAM8\[23\]" game.c
 
-      - name: Apply v0.4.0 three-track Music Library
+      - name: Apply v0.4.1 four-track Music Library
         shell: bash
         run: |
           python3 - <<'PY'
@@ -845,16 +845,17 @@ jobs:
           import math
           import re
           
-          # ---------- Generate the two additional PCM assets ----------
+          # ---------- Generate the three additional PCM assets ----------
           tracks = [
               ("usurper", Path("assets/audio/usurper.raw")),
               ("propagation", Path("assets/audio/propagation.raw")),
+              ("syrthio", Path("assets/audio/syrthio.raw")),
           ]
           SAMPLE_RATE = 16834
           
           for symbol, raw_path in tracks:
               if not raw_path.exists():
-                  raise SystemExit(f"ERROR: {raw_path} was not found. Upload the two new .raw files from the kit into assets/audio/.")
+                  raise SystemExit(f"ERROR: {raw_path} was not found. Upload the additional .raw files from the kit into assets/audio/.")
               data = bytearray(raw_path.read_bytes())
               byte_count = len(data)
 
@@ -894,12 +895,13 @@ jobs:
                   f.write(";\n")
               print(f"{symbol}: {byte_count} bytes, {loop_blocks} timer blocks")
           
-          # ---------- Replace audio.c with a three-track playback engine ----------
+          # ---------- Replace audio.c with a four-track playback engine ----------
           audio_c = r'''#include "audio.h"
           #include "gba.h"
           #include "assets/typeA.h"
           #include "assets/usurper.h"
           #include "assets/propagation.h"
+          #include "assets/syrthio.h"
           
           static const unsigned short ticks_per_sample = 16777216 / 16834;
           static volatile int musicMode = 0;
@@ -915,34 +917,36 @@ jobs:
           static const char *trackData(int track) {
               if (track == 1) return usurper;
               if (track == 2) return propagation;
+              if (track == 3) return syrthio;
               return typeA;
           }
           
           static unsigned int trackBytes(int track) {
               if (track == 1) return (unsigned int)usurper_bytes;
               if (track == 2) return (unsigned int)propagation_bytes;
+              if (track == 3) return (unsigned int)syrthio_bytes;
               return (unsigned int)typeA_bytes;
           }
           
           static void chooseStartTrack(void) {
-              if (musicMode >= 0 && musicMode <= 2) {
+              if (musicMode >= 0 && musicMode <= 3) {
                   currentTrack = musicMode;
               } else {
                   shuffleState = shuffleState * 1664525u + 1013904223u;
-                  currentTrack = (int)((shuffleState >> 16) % 3u);
+                  currentTrack = (int)((shuffleState >> 16) % 4u);
               }
           }
           
           static void chooseNextTrack(void) {
-              if (musicMode == 3) {
+              if (musicMode == 4) {
                   int old = currentTrack;
                   shuffleState = shuffleState * 1664525u + 1013904223u;
-                  int next = (int)((shuffleState >> 16) % 3u);
+                  int next = (int)((shuffleState >> 16) % 4u);
                   if (next == old)
-                      next = (next + 1) % 3;
+                      next = (next + 1) % 4;
                   currentTrack = next;
               } else {
-                  currentTrack = (currentTrack + 1) % 3;
+                  currentTrack = (currentTrack + 1) % 4;
               }
           }
           
@@ -984,9 +988,9 @@ jobs:
           }
           
           void audio_set_music_mode(int mode) {
-              if (mode < 0 || mode > 3) mode = 0;
+              if (mode < 0 || mode > 4) mode = 0;
               musicMode = mode;
-              if (mode <= 2)
+              if (mode <= 3)
                   currentTrack = mode;
           }
           
@@ -1208,7 +1212,7 @@ jobs:
               raise SystemExit("ERROR: v0.3.6 Cosmic save anchors not found.")
           if "SRAM8[24]" not in s:
               s = s.replace(save_anchor, save_anchor + "\n    SRAM8[24] = (u8)musicMode;", 1)
-              s = s.replace(load_anchor, load_anchor + "\n        musicMode = SRAM8[24] <= 3 ? SRAM8[24] : 0;", 1)
+              s = s.replace(load_anchor, load_anchor + "\n        musicMode = SRAM8[24] <= 4 ? SRAM8[24] : 0;", 1)
               s = s.replace(default_anchor, default_anchor + "\n        musicMode = 0;", 1)
           
           # Ensure every normal music startup uses the saved playlist mode.
@@ -1240,6 +1244,7 @@ jobs:
           static char *musicTrackName(int track) {
               if (track == 1) return "USURPER";
               if (track == 2) return "PROPAGATION";
+              if (track == 3) return "SYRTHIO SLOWED+REVERB";
               return "ULTRAFICHE OF YOU";
           }
           
@@ -1247,7 +1252,8 @@ jobs:
               if (!musicEnabled) return "OFF";
               if (musicMode == 1) return "USURPER";
               if (musicMode == 2) return "PROPAGATION";
-              if (musicMode == 3) return "SHUFFLE";
+              if (musicMode == 3) return "SYRTHIO";
+              if (musicMode == 4) return "SHUFFLE";
               return "ULTRAFICHE";
           }
           
@@ -1263,10 +1269,12 @@ jobs:
               drawShadowString(65, 48, line, musicMenuSelection == 1 ? COL_YELLOW : COL_WHITE);
               snprintf(line, sizeof(line), "%c PROPAGATION", musicMenuSelection == 2 ? '>' : ' ');
               drawShadowString(81, 48, line, musicMenuSelection == 2 ? COL_YELLOW : COL_WHITE);
-              snprintf(line, sizeof(line), "%c SHUFFLE", musicMenuSelection == 3 ? '>' : ' ');
-              drawShadowString(97, 48, line, musicMenuSelection == 3 ? COL_YELLOW : COL_WHITE);
-              snprintf(line, sizeof(line), "%c OFF", musicMenuSelection == 4 ? '>' : ' ');
-              drawShadowString(113, 48, line, musicMenuSelection == 4 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c SYRTHIO SLOWED+REVERB", musicMenuSelection == 3 ? '>' : ' ');
+              drawShadowString(93, 36, line, musicMenuSelection == 3 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c SHUFFLE", musicMenuSelection == 4 ? '>' : ' ');
+              drawShadowString(105, 48, line, musicMenuSelection == 4 ? COL_YELLOW : COL_WHITE);
+              snprintf(line, sizeof(line), "%c OFF", musicMenuSelection == 5 ? '>' : ' ');
+              drawShadowString(117, 48, line, musicMenuSelection == 5 ? COL_YELLOW : COL_WHITE);
           
               if (musicEnabled && audio_is_music_playing())
                   snprintf(line, sizeof(line), "NOW: %s", musicTrackName(audio_get_current_track()));
@@ -1331,7 +1339,7 @@ jobs:
           if not m:
               raise SystemExit("ERROR: title Music branch not found.")
           music_branch = '''            } else if (menuSelection == 2) {
-                          musicMenuSelection = musicEnabled ? musicMode : 4;
+                          musicMenuSelection = musicEnabled ? musicMode : 5;
                           musicMenuDirty = 1;
                           musicMenuLastTrack = -1;
                           if (musicEnabled) {
@@ -1358,15 +1366,15 @@ jobs:
                       musicMenuDirty = 0;
                   }
                   if (key_hit(BUTTON_UP)) {
-                      musicMenuSelection = (musicMenuSelection + 4) % 5;
+                      musicMenuSelection = (musicMenuSelection + 5) % 6;
                       musicMenuDirty = 1;
                   }
                   if (key_hit(BUTTON_DOWN)) {
-                      musicMenuSelection = (musicMenuSelection + 1) % 5;
+                      musicMenuSelection = (musicMenuSelection + 1) % 6;
                       musicMenuDirty = 1;
                   }
                   if (key_hit(BUTTON_A)) {
-                      if (musicMenuSelection == 4) {
+                      if (musicMenuSelection == 5) {
                           musicEnabled = 0;
                           reset_music();
                       } else {
@@ -1416,13 +1424,14 @@ jobs:
               raise SystemExit("ERROR: duplicate MUSICMENU handler.")
           
           gp.write_text(s)
-          print("Applied v0.4.0 three-track Music Library + auto-advance + Shuffle")
+          print("Applied v0.4.1 four-track Music Library + auto-advance + Shuffle")
           PY
 
       - name: Verify v0.4.0 soundtrack system
         run: |
           test -f assets/audio/usurper.raw
           test -f assets/audio/propagation.raw
+          test -f assets/audio/syrthio.raw
           grep -n "MUSICMENU" game.h game.c
           grep -n "MUSIC LIBRARY" game.c
           grep -n "SRAM8\[24\]" game.c
@@ -1430,6 +1439,7 @@ jobs:
           grep -n "chooseNextTrack" audio.c
           grep -n "usurper_loopBlocks" assets/usurper.h audio.c
           grep -n "propagation_loopBlocks" assets/propagation.h
+          grep -n "syrthio_loopBlocks" assets/syrthio.h
           grep -n "IRQ_TIMER1" audio.c
           grep -n "musicFullBlocksRemaining" audio.c
           grep -n "musicFinalPartial" audio.c
@@ -1473,7 +1483,7 @@ jobs:
                   'static int gravityWarning = 0;\n', 1)
 
           save = '    SRAM8[24] = (u8)musicMode;'
-          load = '        musicMode = SRAM8[24] <= 3 ? SRAM8[24] : 0;'
+          load = '        musicMode = SRAM8[24] <= 4 ? SRAM8[24] : 0;'
           default = '        musicMode = 0;'
           if save not in s or load not in s or default not in s:
               raise SystemExit('ERROR: Music Library SRAM anchors not found.')
@@ -2400,21 +2410,144 @@ jobs:
           grep -n "anomalyTimeRiftPulse" game.c
           grep -n "MIYOO EDITION v0.6.0 FIX3" game.c
 
+      - name: Apply v0.7.0 Cosmic Chaos Mode
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('game.c')
+          s = p.read_text()
+
+          def function_span(src, name):
+              m = re.search(r'(?m)^static\s+void\s+' + re.escape(name) + r'\s*\([^\n]*\)\s*\{', src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() not found for Cosmic Chaos.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found.')
+
+          def replace_function(src, name, replacement):
+              a,b = function_span(src,name)
+              return src[:a] + replacement + src[b:]
+
+          anchor = 'static int anomalyModeEnabled = 0;'
+          if anchor not in s:
+              raise SystemExit('ERROR: anomaly mode global missing.')
+          if 'static int cosmicChaosEnabled = 0;' not in s:
+              s = s.replace(anchor, anchor + '\nstatic int cosmicChaosEnabled = 0;', 1)
+
+          save = '    SRAM8[26] = (u8)(anomalyModeEnabled ? 1 : 0);'
+          load = '        anomalyModeEnabled = SRAM8[26] <= 1 ? SRAM8[26] : 0;'
+          default = '        anomalyModeEnabled = 0;'
+          if save not in s or load not in s or default not in s:
+              raise SystemExit('ERROR: anomaly SRAM anchors missing.')
+          s=s.replace(save, save+'\n    SRAM8[27] = (u8)(cosmicChaosEnabled ? 1 : 0);',1)
+          s=s.replace(load, load+'\n        cosmicChaosEnabled = SRAM8[27] <= 1 ? SRAM8[27] : 0;',1)
+          s=s.replace(default, default+'\n        cosmicChaosEnabled = 0;',1)
+
+          old='if (difficulty != 2 || !elementsEnabled)'
+          if old not in s:
+              raise SystemExit('ERROR: Elements enable gate not found.')
+          s=s.replace(old, 'if (difficulty != 2 || (!elementsEnabled && !(cosmicChaosEnabled && score >= 2500)))', 1)
+
+          gcount=0
+          for old,new in [
+              ('if (!gravityModeEnabled) return;', 'if (!gravityModeEnabled && !(cosmicChaosEnabled && score >= 5000)) return;'),
+              ('if (!gravityModeEnabled) { updateWorld(); return; }', 'if (!gravityModeEnabled && !(cosmicChaosEnabled && score >= 5000)) { updateWorld(); return; }')]:
+              c=s.count(old); gcount += c; s=s.replace(old,new)
+          if gcount < 2:
+              raise SystemExit(f'ERROR: Gravity gates not fully found ({gcount}).')
+
+          acount=0
+          for old,new in [
+              ('if (!anomalyModeEnabled || anomalyState == 0) return;', 'if ((!anomalyModeEnabled && !(cosmicChaosEnabled && score >= 10000)) || anomalyState == 0) return;'),
+              ('if (!anomalyModeEnabled) { updateWorldGravity(); return; }', 'if (!anomalyModeEnabled && !(cosmicChaosEnabled && score >= 10000)) { updateWorldGravity(); return; }')]:
+              c=s.count(old); acount += c; s=s.replace(old,new)
+          if acount < 2:
+              raise SystemExit(f'ERROR: Anomaly gates not fully found ({acount}).')
+
+          s=s.replace('if (cosmicEnabled) {', 'if (cosmicEnabled || cosmicChaosEnabled) {')
+          s=s.replace('if (cosmicEnabled)', 'if (cosmicEnabled || cosmicChaosEnabled)')
+
+          title = '''static void drawTitleMenu(void) {
+              waitForVBlank();
+              if (!titleBackgroundDrawn) {
+                  drawFullScreenImageDMA(title);
+                  titleBackgroundDrawn = 1;
+                  drawCenteredShadowString(17, 38, 164, 8, "MIYOO EDITION v0.7.0", COL_WHITE);
+              }
+              for (int y = 28; y <= 151; y += 12) restoreTitleStrip(y, 42, 194, 10);
+              char line[38];
+              char *diffName = difficulty == 0 ? "EASY" : (difficulty == 1 ? "NORMAL" : "HARD");
+              snprintf(line,sizeof(line),"%c START GAME",menuSelection==0?'>':' '); drawShadowString(30,46,line,menuSelection==0?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c DIFFICULTY: %s",menuSelection==1?'>':' ',diffName); drawShadowString(42,46,line,menuSelection==1?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC: %s",menuSelection==2?'>':' ',musicModeShortName()); drawShadowString(54,46,line,menuSelection==2?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ELEMENTS: %s",menuSelection==3?'>':' ',elementsEnabled?"ON":"OFF"); drawShadowString(66,46,line,menuSelection==3?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC MODE: %s",menuSelection==4?'>':' ',cosmicEnabled?"ON":"OFF"); drawShadowString(78,46,line,menuSelection==4?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c GRAVITY SHIFT: %s",menuSelection==5?'>':' ',gravityModeEnabled?"ON":"OFF"); drawShadowString(90,46,line,menuSelection==5?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ANOMALY MODE: %s",menuSelection==6?'>':' ',anomalyModeEnabled?"ON":"OFF"); drawShadowString(102,46,line,menuSelection==6?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC CHAOS: %s",menuSelection==7?'>':' ',cosmicChaosEnabled?"ON":"OFF"); drawShadowString(114,46,line,menuSelection==7?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC VISUALIZER",menuSelection==8?'>':' '); drawShadowString(126,46,line,menuSelection==8?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c HIGH SCORES",menuSelection==9?'>':' '); drawShadowString(138,46,line,menuSelection==9?COL_YELLOW:COL_WHITE);
+          }'''
+          s=replace_function(s,'drawTitleMenu',title)
+
+          s,n1=re.subn(r'menuSelection = \(menuSelection \+ 8\) % 9;', 'menuSelection = (menuSelection + 9) % 10;', s, count=1)
+          s,n2=re.subn(r'menuSelection = \(menuSelection \+ 1\) % 9;', 'menuSelection = (menuSelection + 1) % 10;', s, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f'ERROR: Cosmic Chaos navigation patch failed ({n1},{n2}).')
+
+          # Slot 7 was the Visualizer in v0.6.0. Match it by syntax rather than
+          # hard-coded whitespace because earlier patch stages can change indentation.
+          m = re.search(r'(?m)^([ \t]*)}\s*else if \(menuSelection == 7\) \{\s*$', s)
+          if not m:
+              raise SystemExit('ERROR: Visualizer slot 7 branch missing.')
+          indent = m.group(1)
+          chaos = (indent + '} else if (menuSelection == 7) {\n'
+                   + indent + '    cosmicChaosEnabled = !cosmicChaosEnabled;\n'
+                   + indent + '    saveData();\n'
+                   + indent + '    titleDirty = 1;\n'
+                   + indent + '} else if (menuSelection == 8) {')
+          s = s[:m.start()] + chaos + s[m.end():]
+
+          s=s.replace('MIYOO EDITION v0.6.0 FIX3','MIYOO EDITION v0.7.0')
+          for g in ('SRAM8[27]','COSMIC CHAOS: %s','score >= 2500','score >= 5000','score >= 10000','MIYOO EDITION v0.7.0'):
+              if g not in s: raise SystemExit('ERROR: Cosmic Chaos guard missing: '+g)
+          p.write_text(s)
+          print('Applied v0.7.0 Cosmic Chaos progressive mode')
+          PY
+
+      - name: Verify v0.7.0 Cosmic Chaos Mode
+        run: |
+          grep -n "COSMIC CHAOS" game.c
+          grep -n "SRAM8\[27\]" game.c
+          grep -n "score >= 2500" game.c
+          grep -n "score >= 5000" game.c
+          grep -n "score >= 10000" game.c
+          grep -n "MIYOO EDITION v0.7.0" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.6.0-Anomaly-Boss-Mode-FIX3
-          path: "Sandtris - Miyoo Edition v0.6.0 Anomaly Boss Mode FIX3.gba"
+          name: Sandtris-Miyoo-v0.7.0-Cosmic-Chaos
+          path: "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
           if-no-files-found: error
