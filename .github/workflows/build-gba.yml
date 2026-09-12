@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX17 Expedition Centered Playfield Prototype
+name: Build Sandtris Miyoo Edition v0.8.0 FIX18 Expedition Cosmic Event Zone
 
 on:
   push:
@@ -3081,21 +3081,34 @@ jobs:
           grep -n '#define SCORE_OFFSET_X 166' game.h
           grep -n 'MIYOO EDITION v0.8.0 FIX16' game.c
 
+      - name: Apply v0.8.0 Expedition Stage 1 FIX18 Expanded Cosmic Event Zone
+        shell: bash
+        run: |
+          echo ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpOyBzPXAucmVhZF90ZXh0KCkKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xzKyk/KD86aW5saW5lXHMrKT9bQS1aYS16X11bXHdcc1wqXSpcYicrcmUuZXNjYXBlKG5hbWUpK3InXHMqXChbXjtdKlwpXHMqXHsnLHNyYykKICAgIGlmIG5vdCBtOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJytuYW1lKycgZGVmaW5pdGlvbiBub3QgZm91bmQnKQogICAgYj1zcmMuZmluZCgneycsbS5zdGFydCgpKTsgZD0wCiAgICBmb3IgaSBpbiByYW5nZShiLGxlbihzcmMpKToKICAgICAgICBpZiBzcmNbaV09PSd7JzogZCs9MQogICAgICAgIGVsaWYgc3JjW2ldPT0nfSc6CiAgICAgICAgICAgIGQtPTEKICAgICAgICAgICAgaWYgZD09MDogcmV0dXJuIG0uc3RhcnQoKSxpKzEKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBjbG9zaW5nIGJyYWNlIG5vdCBmb3VuZCcpCmEsYj1zcGFuKHMsJ2RyYXdFeHBlZGl0aW9uU2VjdG9yQXJ0JykKYXJ0PScnJ3N0YXRpYyB2b2lkIGRyYXdFeHBlZGl0aW9uU2VjdG9yQXJ0KHZvaWQpIHsKICAgIGlmICghZXhwZWRpdGlvbk1vZGUpIHJldHVybjsKICAgIC8qIEZJWDE4OiBleHBhbmRlZCBldmVudCB6b25lLCBzYWZlbHkgbGVmdCBvZiB0aGUgYXBwcm92ZWQgcGxheWZpZWxkLiAqLwogICAgaWYgKGV4cGVkaXRpb25TZWN0b3IgPT0gMCkgewogICAgICAgIGNvbnN0IGludCBjeCA9IDMxLCBjeSA9IDExNiwgciA9IDIyOwogICAgICAgIGZvciAoaW50IHkgPSAtcjsgeSA8PSByOyB5KyspIHsKICAgICAgICAgICAgZm9yIChpbnQgeCA9IC1yOyB4IDw9IHI7IHgrKykgewogICAgICAgICAgICAgICAgaW50IGQgPSB4KnggKyB5Knk7CiAgICAgICAgICAgICAgICBpZiAoZCA8PSByKnIpIHsKICAgICAgICAgICAgICAgICAgICB1MTYgYyA9ICh4ICsgeSA8IC01KSA/IDB4N0QyMCA6IDB4NEU0MDsKICAgICAgICAgICAgICAgICAgICBpZiAoZCA+IChyLTIpKihyLTIpKSBjID0gMHg3RkUwOwogICAgICAgICAgICAgICAgICAgIHNldFBpeGVsKGN5ICsgeSwgY3ggKyB4LCBjKTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICBkcmF3UmVjdERNQSgxMDcsIDIxLCA4LCA0LCAweDNCMDgpOwogICAgICAgIGRyYXdSZWN0RE1BKDExOSwgMzQsIDEwLCA0LCAweDNCMDgpOwogICAgICAgIGRyYXdSZWN0RE1BKDEyNiwgMjUsIDcsIDMsIDB4M0IwOCk7CiAgICAgICAgZHJhd1JlY3RETUEoMTAwLCAzNiwgNCwgMiwgQ09MX1dISVRFKTsKICAgICAgICBkcmF3UmVjdERNQSg3OCwgNTUsIDQsIDQsIDB4NjMxOCk7CiAgICAgICAgc2V0UGl4ZWwoNzgsIDU1LCBDT0xfV0hJVEUpOwogICAgICAgIHNldFBpeGVsKDkxLCAxMiwgQ09MX1lFTExPVyk7CiAgICAgICAgc2V0UGl4ZWwoOTAsIDEzLCBDT0xfV0hJVEUpOwogICAgfSBlbHNlIHsKICAgICAgICBzdGF0aWMgY29uc3Qgc2lnbmVkIGNoYXIgYXhbMTVdID0gezUsMjQsNDMsNTksMTMsMzQsNTMsNywyOCw0Nyw2MSwxNywzOSw1NiwyNX07CiAgICAgICAgc3RhdGljIGNvbnN0IHNob3J0IGF5WzE1XSA9IHsyNCwzMiwzOSw0Nyw1OCw2Nyw3Niw4Niw5NSwxMDQsMTEzLDEyMywxMzQsMTQzLDE1MX07CiAgICAgICAgc3RhdGljIGNvbnN0IHVuc2lnbmVkIGNoYXIgc3pbMTVdID0gezMsNSw0LDMsNiw0LDUsNCwzLDYsMyw1LDQsMyw0fTsKICAgICAgICBmb3IgKGludCBpID0gMDsgaSA8IDE1OyBpKyspIHsKICAgICAgICAgICAgdTE2IHJvY2sgPSAoaSAmIDEpID8gMHgzNUFEIDogMHg0NjMxOwogICAgICAgICAgICBkcmF3UmVjdERNQShheVtpXSwgYXhbaV0sIHN6W2ldLCBzeltpXSwgcm9jayk7CiAgICAgICAgICAgIGlmIChzeltpXSA+PSA0KSBzZXRQaXhlbChheVtpXSwgYXhbaV0sIDB4NUVGNyk7CiAgICAgICAgfQogICAgICAgIHNldFBpeGVsKDUyLCAyMCwgMHg0NjMxKTsKICAgICAgICBzZXRQaXhlbCg4MiwgNjMsIDB4MzVBRCk7CiAgICAgICAgc2V0UGl4ZWwoMTE2LCAzMSwgMHg0NjMxKTsKICAgICAgICBzZXRQaXhlbCgxNDYsIDgsIDB4MzVBRCk7CiAgICB9Cn0nJycKcz1zWzphXSthcnQrc1tiOl0Kcz1zLnJlcGxhY2UoJ01JWU9PIEVESVRJT04gdjAuOC4wIEZJWDE2JywnTUlZT08gRURJVElPTiB2MC44LjAgRklYMTgnKQpmb3IgdG9rZW4gaW4gKCdjb25zdCBpbnQgY3ggPSAzMSwgY3kgPSAxMTYsIHIgPSAyMicsJ2F4WzE1XScsJ01JWU9PIEVESVRJT04gdjAuOC4wIEZJWDE4Jyk6CiAgICBpZiB0b2tlbiBub3QgaW4gczogcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IEZJWDE4IGd1YXJkIG1pc3Npbmc6ICcrdG9rZW4pCnAud3JpdGVfdGV4dChzKQpwcmludCgnQXBwbGllZCBGSVgxOCBleHBhbmRlZCBjb3NtaWMgZXZlbnQgem9uZScpCg== | base64 -d > /tmp/fix18_patch.py
+          python3 /tmp/fix18_patch.py
+
+      - name: Verify v0.8.0 FIX18 cosmic event zone
+        run: |
+          grep -n 'const int cx = 31, cy = 116, r = 22' game.c
+          grep -n 'ax\[15\]' game.c
+          grep -n '#define BOARD_X_OFFSET 72' game.h
+          grep -n 'MIYOO EDITION v0.8.0 FIX18' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX17
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX18
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
           if-no-files-found: error
