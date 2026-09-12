@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX1 Expedition Stage 1
+name: Build Sandtris Miyoo Edition v0.8.0 FIX2 Expedition Stage 1
 
 on:
   push:
@@ -2586,7 +2586,7 @@ jobs:
           if proto not in s:
               raise SystemExit('ERROR: gravity HUD prototype missing.')
           if 'static void drawExpeditionHUD(void);' not in s:
-              s=s.replace(proto, proto + '\nstatic void drawShadowString(int row, int col, char *str, u16 color);\nstatic void updateExpeditionProgress(void);\nstatic void drawExpeditionHUD(void);', 1)
+              s=s.replace(proto, proto + '\nstatic void drawShadowString(int row, int col, char *str, u16 color);\nstatic void drawCenteredShadowString(int row, int col, int width, int height, char *str, u16 color);\nstatic void updateExpeditionProgress(void);\nstatic void drawExpeditionHUD(void);', 1)
 
           a,b=function_span(s,'drawPiece')
           block=s[a:b]
@@ -2701,15 +2701,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX1.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX1.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX1.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX1.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX2.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX2.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX2.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX2.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
           name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX1.gba"
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX2.gba"
           if-no-files-found: error
