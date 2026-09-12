@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX16 Expedition Dynamic Background Restored
+name: Build Sandtris Miyoo Edition v0.8.0 FIX17 Expedition Centered Playfield Prototype
 
 on:
   push:
@@ -3054,21 +3054,48 @@ jobs:
           grep -n "drawShadowString(2, 190" game.c
           grep -n "MIYOO EDITION v0.8.0 FIX16" game.c
 
+      - name: Apply v0.8.0 Expedition Stage 1 FIX17 Centered Playfield Prototype
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('game.h')
+          s=p.read_text()
+          changes={
+              '#define BOARD_X_OFFSET 40':'#define BOARD_X_OFFSET 72',
+              '#define NEXT_PIECE_OFFSET_X 132':'#define NEXT_PIECE_OFFSET_X 166',
+              '#define SCORE_OFFSET_X 128':'#define SCORE_OFFSET_X 166',
+          }
+          for old,new in changes.items():
+              if old not in s:
+                  raise SystemExit('ERROR: layout anchor missing: '+old)
+              s=s.replace(old,new,1)
+          p.write_text(s)
+          print('Applied FIX17 centered playfield: board +32px right, UI moved into right margin')
+          PY
+
+      - name: Verify v0.8.0 FIX17 centered playfield
+        run: |
+          grep -n '#define BOARD_X_OFFSET 72' game.h
+          grep -n '#define NEXT_PIECE_OFFSET_X 166' game.h
+          grep -n '#define SCORE_OFFSET_X 166' game.h
+          grep -n 'MIYOO EDITION v0.8.0 FIX16' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX16
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX17
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX17.gba"
           if-no-files-found: error
