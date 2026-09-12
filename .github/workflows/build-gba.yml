@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX7 Expedition Stable Overlay
+name: Build Sandtris Miyoo Edition v0.8.0 FIX8 Expedition Stable Center Announcements
 
 on:
   push:
@@ -2901,10 +2901,10 @@ jobs:
           print('Applied FIX5 boxless stable announcements + right-side EXP counter')
           PYFIX5
 
-      - name: Apply v0.8.0 Expedition Stage 1 FIX6 Stable Overlay
+      - name: Apply v0.8.0 Expedition Stage 1 FIX8 Stable Center Overlay
         shell: bash
         run: |
-          python3 - <<'PYFIX6'
+          python3 - <<'PYFIX8'
           from pathlib import Path
           import re
           p=Path('game.c')
@@ -2922,18 +2922,11 @@ jobs:
               raise SystemExit('ERROR: '+name+' closing brace not found')
 
           proto='static void drawDynamicSpaceTick(void);'
-          if proto not in s: raise SystemExit('ERROR: dynamic space prototype missing')
+          if proto not in s: raise SystemExit('ERROR: dynamic-space prototype missing')
           if 'static void drawExpeditionSectorArt(void);' not in s:
-              s=s.replace(proto, proto+'\nstatic void drawExpeditionSectorArt(void);', 1)
+              s=s.replace(proto, proto+'\nstatic void drawExpeditionSectorArt(void);',1)
 
-          a,b=span(s,'drawDynamicSpaceTick')
-          dyn=s[a:b]
-          if 'drawExpeditionSectorArt();' not in dyn:
-              close=dyn.rfind('}')
-              dyn=dyn[:close].rstrip()+'\n    drawExpeditionSectorArt();\n'+dyn[close:]
-              s=s[:a]+dyn+s[b:]
-
-          art=r'''static void drawExpeditionSectorArt(void) {
+          art = r'''static void drawExpeditionSectorArt(void) {
               if (!expeditionMode) return;
               if (expeditionSector == 0) {
                   const int cx = 20, cy = 118, r = 13;
@@ -2963,44 +2956,55 @@ jobs:
           }
 
           '''
-          insert_at=s.find('static void drawExpeditionHUD(void) {')
-          if insert_at < 0: raise SystemExit('ERROR: Expedition HUD definition missing')
+          hudpos=s.find('static void drawExpeditionHUD(void) {')
+          if hudpos<0: raise SystemExit('ERROR: Expedition HUD missing')
           if 'static void drawExpeditionSectorArt(void) {' not in s:
-              s=s[:insert_at]+art+s[insert_at:]
+              s=s[:hudpos]+art+s[hudpos:]
+
+          a,b=span(s,'drawDynamicSpaceTick')
+          dyn=s[a:b]
+          old='    spaceAnimFrame++;\n    if ((spaceAnimFrame & 3u) != 0u)\n        return;'
+          new='    spaceAnimFrame++;\n    if ((spaceAnimFrame & 3u) != 0u) {\n        drawExpeditionSectorArt();\n        return;\n    }'
+          if old not in dyn: raise SystemExit('ERROR: dynamic-space early-return pattern missing')
+          dyn=dyn.replace(old,new,1)
+          close=dyn.rfind('}')
+          dyn=dyn[:close].rstrip()+'\n    drawExpeditionSectorArt();\n'+dyn[close:]
+          s=s[:a]+dyn+s[b:]
 
           a,b=span(s,'drawExpeditionHUD')
-          hud=r'''static void drawExpeditionHUD(void) {
+          hud = r'''static void drawExpeditionHUD(void) {
               if (!expeditionMode) return;
               char line[28];
               snprintf(line, sizeof(line), "EXP %d/5", expeditionSector + 1);
               drawShadowString(2, 190, line, COL_YELLOW);
 
               if (expeditionBannerFrames > 0) {
-                  drawCenteredShadowString(30, 144, 94, 8, expeditionSectorName(), COL_YELLOW);
+                  waitForVBlank();
+                  drawCenteredShadowString(52, 40, 82, 8, expeditionSectorName(), COL_YELLOW);
                   if (expeditionSector == 0) {
-                      drawCenteredShadowString(43, 144, 94, 8, "EXPEDITION", COL_WHITE);
-                      drawCenteredShadowString(54, 144, 94, 8, "BEGINS", COL_WHITE);
+                      drawCenteredShadowString(66, 40, 82, 8, "EXPEDITION", COL_WHITE);
+                      drawCenteredShadowString(78, 40, 82, 8, "BEGINS", COL_WHITE);
                   } else {
-                      drawCenteredShadowString(43, 144, 94, 8, "SECTOR 2", COL_WHITE);
-                      drawCenteredShadowString(54, 144, 94, 8, "REACHED", COL_WHITE);
+                      drawCenteredShadowString(66, 40, 82, 8, "SECTOR 2", COL_WHITE);
+                      drawCenteredShadowString(78, 40, 82, 8, "REACHED", COL_WHITE);
                   }
               }
           }'''
           s=s[:a]+hud+s[b:]
-
-          s=s.replace('MIYOO EDITION v0.8.0 FIX5','MIYOO EDITION v0.8.0 FIX6')
-          for g in ('drawExpeditionSectorArt();','drawCenteredShadowString(30, 144, 94, 8','MIYOO EDITION v0.8.0 FIX6'):
-              if g not in s: raise SystemExit('ERROR: FIX6 guard missing: '+g)
+          s=s.replace('MIYOO EDITION v0.8.0 FIX5','MIYOO EDITION v0.8.0 FIX8')
+          for g in ('drawExpeditionSectorArt();','drawCenteredShadowString(52, 40, 82, 8','drawShadowString(2, 190','MIYOO EDITION v0.8.0 FIX8'):
+              if g not in s: raise SystemExit('ERROR: FIX8 guard missing: '+g)
           p.write_text(s)
-          print('Applied FIX6 stable sector art + right-side boxless announcements')
-          PYFIX6
+          print('Applied FIX8: FIX5 layout + stable sector art + VBlank announcement text')
+          PYFIX8
 
-      - name: Verify v0.8.0 FIX6 Expedition stable overlay
+      - name: Verify v0.8.0 FIX8 Expedition stable center overlay
         run: |
           grep -n "drawExpeditionSectorArt" game.c
-          grep -n "drawCenteredShadowString(30, 144, 94, 8" game.c
-          grep -n "MIYOO EDITION v0.8.0 FIX6" game.c
-          ! grep -q "drawCenteredShadowString(52, 40, 82, 8" game.c
+          grep -n "drawCenteredShadowString(52, 40, 82, 8" game.c
+          grep -n "drawShadowString(2, 190" game.c
+          grep -n "MIYOO EDITION v0.8.0 FIX8" game.c
+          ! grep -q "drawCenteredShadowString(30, 144, 94, 8" game.c
 
       - name: Build ROM
         run: make
@@ -3008,15 +3012,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX7.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX7.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX7.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX7.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX5
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX7.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX8
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
           if-no-files-found: error
