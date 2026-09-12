@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX10 Expedition Exact Layout Flicker Fix
+name: Build Sandtris Miyoo Edition v0.8.0 FIX8 Expedition Stable Center Announcements
 
 on:
   push:
@@ -3006,149 +3006,21 @@ jobs:
           grep -n "MIYOO EDITION v0.8.0 FIX8" game.c
           ! grep -q "drawCenteredShadowString(30, 144, 94, 8" game.c
 
-      - name: Apply v0.8.0 Expedition Stage 1 FIX10 Stable Held Overlays
-        shell: bash
-        run: |
-          python3 - <<'PYFIX10'
-          from pathlib import Path
-          import re
-          p=Path('game.c')
-          s=p.read_text()
-
-          def span(src,name):
-              m=re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\b'+re.escape(name)+r'\s*\([^;]*\)\s*\{',src)
-              if not m: raise SystemExit('ERROR: '+name+' definition not found')
-              b=src.find('{',m.start()); d=0
-              for i in range(b,len(src)):
-                  if src[i]=='{': d+=1
-                  elif src[i]=='}':
-                      d-=1
-                      if d==0: return m.start(),i+1
-              raise SystemExit('ERROR: '+name+' closing brace not found')
-
-          glob='static int expeditionBannerFrames = 0;'
-          if glob not in s: raise SystemExit('ERROR: expedition banner global missing')
-          if 'static int expeditionOverlayFrozen = 0;' not in s:
-              s=s.replace(glob,glob+'\nstatic int expeditionOverlayFrozen = 0;',1)
-
-          init='    expeditionBannerFrames = expeditionMode ? 150 : 0;'
-          if init not in s: raise SystemExit('ERROR: expedition init anchor missing')
-          if 'expeditionOverlayFrozen = 0;' not in s[s.find(init):s.find(init)+180]:
-              s=s.replace(init,init+'\n    expeditionOverlayFrozen = 0;',1)
-
-          a,b=span(s,'updateExpeditionProgress')
-          progress='''static void updateExpeditionProgress(void) {
-              if (!expeditionMode) return;
-              int target = score >= 5000 ? 1 : 0;
-              if (target != expeditionSector) {
-                  expeditionSector = target;
-                  expeditionBannerFrames = 150;
-                  expeditionOverlayFrozen = 0;
-              }
-              expeditionVisualFrame++;
-          }'''
-          s=s[:a]+progress+s[b:]
-
-          a,b=span(s,'drawDynamicSpaceTick')
-          dyn=s[a:b]
-          dyn=dyn.replace('    spaceAnimFrame++;\n    if ((spaceAnimFrame & 3u) != 0u) {\n        drawExpeditionSectorArt();\n        return;\n    }','    spaceAnimFrame++;\n    if ((spaceAnimFrame & 3u) != 0u)\n        return;',1)
-          dyn=dyn.replace('\n    drawExpeditionSectorArt();\n}','\n}',1)
-          s=s[:a]+dyn+s[b:]
-
-          a,b=span(s,'drawExpeditionHUD')
-          hud='''static void drawExpeditionHUD(void) {
-              if (!expeditionMode) return;
-              char line[28];
-              snprintf(line, sizeof(line), "EXP %d/5", expeditionSector + 1);
-              drawShadowString(2, 190, line, COL_YELLOW);
-          }'''
-          s=s[:a]+hud+s[b:]
-
-          marker='static void drawExpeditionHUD(void) {'
-          pos=s.find(marker)
-          overlay='''static void drawExpeditionHeldOverlay(void) {
-              if (!expeditionMode) return;
-              drawExpeditionSectorArt();
-              if (expeditionBannerFrames > 0) {
-                  drawCenteredShadowString(52, 40, 82, 8, expeditionSectorName(), COL_YELLOW);
-                  if (expeditionSector == 0) {
-                      drawCenteredShadowString(66, 40, 82, 8, "EXPEDITION", COL_WHITE);
-                      drawCenteredShadowString(78, 40, 82, 8, "BEGINS", COL_WHITE);
-                  } else {
-                      drawCenteredShadowString(66, 40, 82, 8, "SECTOR 2", COL_WHITE);
-                      drawCenteredShadowString(78, 40, 82, 8, "REACHED", COL_WHITE);
-                  }
-              }
-          }
-
-          '''
-          if 'static void drawExpeditionHeldOverlay(void) {' not in s:
-              s=s[:pos]+overlay+s[pos:]
-
-          proto='static void drawExpeditionHUD(void);'
-          if 'static void drawExpeditionHeldOverlay(void);' not in s:
-              s=s.replace(proto,proto+'\nstatic void drawExpeditionHeldOverlay(void);',1)
-
-          a,b=span(s,'run')
-          run=s[a:b]
-          brace=run.find('{')
-          gate='''
-              if (expeditionMode && expeditionOverlayFrozen && expeditionBannerFrames > 0) {
-                  expeditionBannerFrames--;
-                  if (expeditionBannerFrames == 0)
-                      expeditionOverlayFrozen = 0;
-                  return;
-              }
-          '''
-          if 'expeditionOverlayFrozen && expeditionBannerFrames > 0' not in run:
-              run=run[:brace+1]+gate+run[brace+1:]
-
-          pat=re.compile(r'\n\s*if \(expeditionMode &&\s*\n\s*\(state == FALL \|\| state == FLOOD \|\| state == SPAWN \|\| state == SPAWN2 \|\|\s*\n\s*state == CLEAR1 \|\| state == CLEAR2 \|\| state == CLEAR3\)\) \{\s*\n\s*updateExpeditionProgress\(\);\s*\n\s*drawExpeditionHUD\(\);\s*\n\s*\}')
-          repl='''
-              if (expeditionMode &&
-                  (state == FALL || state == FLOOD || state == SPAWN || state == SPAWN2 ||
-                   state == CLEAR1 || state == CLEAR2 || state == CLEAR3)) {
-                  updateExpeditionProgress();
-                  drawExpeditionHUD();
-                  waitForVBlank();
-                  drawExpeditionHeldOverlay();
-                  if (expeditionBannerFrames > 0)
-                      expeditionOverlayFrozen = 1;
-              }'''
-          run2,n=pat.subn(repl,run,count=1)
-          if n != 1: raise SystemExit('ERROR: Expedition end-of-run hook not found exactly once')
-          s=s[:a]+run2+s[b:]
-
-          s=s.replace('MIYOO EDITION v0.8.0 FIX8','MIYOO EDITION v0.8.0 FIX10')
-          for g in ('drawExpeditionHeldOverlay();','expeditionOverlayFrozen','drawCenteredShadowString(52, 40, 82, 8','drawShadowString(2, 190','MIYOO EDITION v0.8.0 FIX10'):
-              if g not in s: raise SystemExit('ERROR: FIX10 guard missing: '+g)
-          p.write_text(s)
-          print('Applied FIX10 exact FIX8 layout with held flicker-free announcement')
-          PYFIX10
-
-      - name: Verify v0.8.0 FIX10 exact-layout flicker fix
-        run: |
-          grep -n "drawExpeditionHeldOverlay" game.c
-          grep -n "expeditionOverlayFrozen" game.c
-          grep -n "drawCenteredShadowString(52, 40, 82, 8" game.c
-          grep -n "drawShadowString(2, 190" game.c
-          grep -n "MIYOO EDITION v0.8.0 FIX10" game.c
-
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX10
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX8
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX8.gba"
           if-no-files-found: error
