@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.7.1 Four-Track Soundtrack
+name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 1
 
 on:
   push:
@@ -2533,21 +2533,183 @@ jobs:
           grep -n "score >= 10000" game.c
           grep -n "MIYOO EDITION v0.7.0" game.c
 
+      - name: Apply v0.8.0 Expedition Stage 1
+        shell: bash
+        run: |
+          cat > /tmp/v080_expedition_stage1.py <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('game.c')
+          s = p.read_text()
+
+          def function_span(src, name):
+              m = re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\b' + re.escape(name) + r'\s*\([^;]*\)\s*\{', src)
+              if not m:
+                  raise SystemExit(f'ERROR: {name}() definition not found.')
+              brace = src.find('{', m.start())
+              depth = 0
+              for i in range(brace, len(src)):
+                  if src[i] == '{': depth += 1
+                  elif src[i] == '}':
+                      depth -= 1
+                      if depth == 0: return m.start(), i + 1
+              raise SystemExit(f'ERROR: {name}() closing brace not found.')
+
+          def replace_function(src, name, replacement):
+              a,b = function_span(src,name)
+              return src[:a] + replacement + src[b:]
+
+          anchor = 'static int cosmicChaosEnabled = 0;'
+          if anchor not in s:
+              raise SystemExit('ERROR: Cosmic Chaos global missing.')
+          if 'static int expeditionMode = 0;' not in s:
+              s = s.replace(anchor, anchor + '\nstatic int expeditionMode = 0;\nstatic int expeditionSector = 0;\nstatic int expeditionBannerFrames = 0;\nstatic int voidUnlocked = 0;', 1)
+
+          save = '    SRAM8[27] = (u8)(cosmicChaosEnabled ? 1 : 0);'
+          load = '        cosmicChaosEnabled = SRAM8[27] <= 1 ? SRAM8[27] : 0;'
+          default = '        cosmicChaosEnabled = 0;'
+          if save not in s or load not in s or default not in s:
+              raise SystemExit('ERROR: Cosmic Chaos SRAM anchors missing.')
+          s=s.replace(save, save+'\n    SRAM8[28] = (u8)(voidUnlocked ? 1 : 0);',1)
+          s=s.replace(load, load+'\n        voidUnlocked = SRAM8[28] <= 1 ? SRAM8[28] : 0;',1)
+          s=s.replace(default, default+'\n        voidUnlocked = 0;',1)
+
+          init_anchor = '    gameOverHandled = 0;\n'
+          if init_anchor not in s:
+              raise SystemExit('ERROR: game init anchor missing.')
+          s=s.replace(init_anchor, init_anchor + '    expeditionSector = 0;\n    expeditionBannerFrames = expeditionMode ? 150 : 0;\n', 1)
+
+          s=s.replace('if (cosmicEnabled || cosmicChaosEnabled)', 'if (cosmicEnabled || cosmicChaosEnabled || expeditionMode)')
+
+          proto = 'static void drawGravityHUD(void);'
+          if proto not in s:
+              raise SystemExit('ERROR: gravity HUD prototype missing.')
+          if 'static void drawExpeditionHUD(void);' not in s:
+              s=s.replace(proto, proto + '\nstatic void updateExpeditionProgress(void);\nstatic void drawExpeditionHUD(void);', 1)
+
+          a,b=function_span(s,'drawPiece')
+          block=s[a:b]
+          hook='    drawGravityHUD();'
+          if hook not in block:
+              raise SystemExit('ERROR: drawPiece gravity HUD hook missing.')
+          if 'drawExpeditionHUD();' not in block:
+              block=block.replace(hook, hook+'\n    updateExpeditionProgress();\n    drawExpeditionHUD();',1)
+          s=s[:a]+block+s[b:]
+
+          marker='static char *gravityName(void) {'
+          if marker not in s:
+              raise SystemExit('ERROR: gravity helper insertion marker missing.')
+          helpers=r'''static char *expeditionSectorName(void) {
+              if (expeditionSector == 1) return "ASTEROID BELT";
+              return "EARTH ORBIT";
+          }
+
+          static void updateExpeditionProgress(void) {
+              if (!expeditionMode) return;
+              int target = score >= 5000 ? 1 : 0;
+              if (target != expeditionSector) {
+                  expeditionSector = target;
+                  expeditionBannerFrames = 180;
+              }
+              if (expeditionBannerFrames > 0) expeditionBannerFrames--;
+          }
+
+          static void drawExpeditionHUD(void) {
+              if (!expeditionMode) return;
+              char line[28];
+              snprintf(line, sizeof(line), "EXP %d/5", expeditionSector + 1);
+              drawShadowString(2, 2, line, COL_YELLOW);
+              if (expeditionBannerFrames > 0) {
+                  drawCenteredShadowString(18, 40, 176, 8, expeditionSectorName(), COL_YELLOW);
+                  if (expeditionSector == 0)
+                      drawCenteredShadowString(29, 40, 176, 8, "EXPEDITION BEGINS", COL_WHITE);
+                  else
+                      drawCenteredShadowString(29, 40, 176, 8, "SECTOR 2 REACHED", COL_WHITE);
+              }
+          }
+
+          '''
+          if 'static char *expeditionSectorName(void)' not in s:
+              s=s.replace(marker,helpers+marker,1)
+
+          title = '''static void drawTitleMenu(void) {
+              waitForVBlank();
+              if (!titleBackgroundDrawn) {
+                  drawFullScreenImageDMA(title);
+                  titleBackgroundDrawn = 1;
+                  drawCenteredShadowString(15, 38, 164, 8, "MIYOO EDITION v0.8.0", COL_WHITE);
+              }
+              for (int y = 25; y <= 149; y += 11) restoreTitleStrip(y, 40, 196, 9);
+              char line[38];
+              char *diffName = difficulty == 0 ? "EASY" : (difficulty == 1 ? "NORMAL" : "HARD");
+              snprintf(line,sizeof(line),"%c START GAME",menuSelection==0?'>':' '); drawShadowString(27,44,line,menuSelection==0?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c EXPEDITION",menuSelection==1?'>':' '); drawShadowString(38,44,line,menuSelection==1?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c DIFFICULTY: %s",menuSelection==2?'>':' ',diffName); drawShadowString(49,44,line,menuSelection==2?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC: %s",menuSelection==3?'>':' ',musicModeShortName()); drawShadowString(60,44,line,menuSelection==3?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ELEMENTS: %s",menuSelection==4?'>':' ',elementsEnabled?"ON":"OFF"); drawShadowString(71,44,line,menuSelection==4?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC MODE: %s",menuSelection==5?'>':' ',cosmicEnabled?"ON":"OFF"); drawShadowString(82,44,line,menuSelection==5?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c GRAVITY SHIFT: %s",menuSelection==6?'>':' ',gravityModeEnabled?"ON":"OFF"); drawShadowString(93,44,line,menuSelection==6?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c ANOMALY MODE: %s",menuSelection==7?'>':' ',anomalyModeEnabled?"ON":"OFF"); drawShadowString(104,44,line,menuSelection==7?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c COSMIC CHAOS: %s",menuSelection==8?'>':' ',cosmicChaosEnabled?"ON":"OFF"); drawShadowString(115,44,line,menuSelection==8?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c MUSIC VISUALIZER",menuSelection==9?'>':' '); drawShadowString(126,44,line,menuSelection==9?COL_YELLOW:COL_WHITE);
+              snprintf(line,sizeof(line),"%c HIGH SCORES",menuSelection==10?'>':' '); drawShadowString(137,44,line,menuSelection==10?COL_YELLOW:COL_WHITE);
+          }'''
+          s=replace_function(s,'drawTitleMenu',title)
+
+          s,n1=re.subn(r'menuSelection = \(menuSelection \+ 9\) % 10;', 'menuSelection = (menuSelection + 10) % 11;', s, count=1)
+          s,n2=re.subn(r'menuSelection = \(menuSelection \+ 1\) % 10;', 'menuSelection = (menuSelection + 1) % 11;', s, count=1)
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f'ERROR: Expedition navigation patch failed ({n1},{n2}).')
+
+          case_start=s.find('    case TITLE:')
+          case_end=s.find('        break;',case_start)
+          if case_start < 0 or case_end < 0:
+              raise SystemExit('ERROR: TITLE case not found.')
+          titlecase=s[case_start:case_end]
+          for old in range(9,0,-1):
+              titlecase=titlecase.replace(f'menuSelection == {old}',f'menuSelection == {old+1}')
+
+          classic='            if (menuSelection == 0) {\n                state = START;'
+          if classic not in titlecase:
+              raise SystemExit('ERROR: Classic start branch missing.')
+          repl='            if (menuSelection == 0) {\n                expeditionMode = 0;\n                state = START;\n            } else if (menuSelection == 1) {\n                expeditionMode = 1;\n                state = START;'
+          titlecase=titlecase.replace(classic,repl,1)
+          s=s[:case_start]+titlecase+s[case_end:]
+
+          s=s.replace('MIYOO EDITION v0.7.0','MIYOO EDITION v0.8.0')
+          guards=('EXPEDITION','SRAM8[28]','expeditionMode = 1','EXP %d/5','ASTEROID BELT','MIYOO EDITION v0.8.0')
+          for g in guards:
+              if g not in s: raise SystemExit('ERROR: Expedition guard missing: '+g)
+
+          p.write_text(s)
+          print('Applied v0.8.0 Expedition Stage 1 campaign foundation')
+          PY
+          python3 /tmp/v080_expedition_stage1.py
+
+      - name: Verify v0.8.0 Expedition Stage 1
+        run: |
+          grep -n "EXPEDITION" game.c
+          grep -n "SRAM8\[28\]" game.c
+          grep -n "ASTEROID BELT" game.c
+          grep -n "expeditionMode = 1" game.c
+          grep -n "MIYOO EDITION v0.8.0" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.7.0-Cosmic-Chaos
-          path: "Sandtris - Miyoo Edition v0.7.1 Four Track Soundtrack.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1.gba"
           if-no-files-found: error
