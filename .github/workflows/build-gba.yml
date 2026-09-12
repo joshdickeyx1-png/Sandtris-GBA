@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX9 Expedition Flicker-Free Overlays
+name: Build Sandtris Miyoo Edition v0.8.0 FIX10 Expedition Exact Layout Flicker Fix
 
 on:
   push:
@@ -3006,18 +3006,133 @@ jobs:
           grep -n "MIYOO EDITION v0.8.0 FIX8" game.c
           ! grep -q "drawCenteredShadowString(30, 144, 94, 8" game.c
 
-      - name: Apply v0.8.0 Expedition Stage 1 FIX9 Atomic Flicker-Free Overlays
+      - name: Apply v0.8.0 Expedition Stage 1 FIX10 Stable Held Overlays
         shell: bash
         run: |
-          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpCnM9cC5yZWFkX3RleHQoKQoKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xzKyk/KD86aW5saW5lXHMrKT9bQS1aYS16X11bXHdcc1wqXSpcYicrcmUuZXNjYXBlKG5hbWUpK3InXHMqXChbXjtdKlwpXHMqXHsnLHNyYykKICAgIGlmIG5vdCBtOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJytuYW1lKycgZGVmaW5pdGlvbiBub3QgZm91bmQnKQogICAgYj1zcmMuZmluZCgneycsbS5zdGFydCgpKTsgZD0wCiAgICBmb3IgaSBpbiByYW5nZShiLGxlbihzcmMpKToKICAgICAgICBpZiBzcmNbaV09PSd7JzogZCs9MQogICAgICAgIGVsaWYgc3JjW2ldPT0nfSc6CiAgICAgICAgICAgIGQtPTEKICAgICAgICAgICAgaWYgZD09MDogcmV0dXJuIG0uc3RhcnQoKSxpKzEKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiAnK25hbWUrJyBjbG9zaW5nIGJyYWNlIG5vdCBmb3VuZCcpCgpnPSdzdGF0aWMgaW50IGV4cGVkaXRpb25CYW5uZXJGcmFtZXMgPSAwOycKaWYgZyBub3QgaW4gczogcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IEV4cGVkaXRpb24gYmFubmVyIGdsb2JhbCBtaXNzaW5nJykKaWYgJ3N0YXRpYyBpbnQgZXhwZWRpdGlvbkJhbm5lckRyYXduID0gMDsnIG5vdCBpbiBzOgogICAgcz1zLnJlcGxhY2UoZyxnKydcbnN0YXRpYyBpbnQgZXhwZWRpdGlvbkJhbm5lckRyYXduID0gMDsnLDEpCgppbml0PScgICAgZXhwZWRpdGlvbkJhbm5lckZyYW1lcyA9IGV4cGVkaXRpb25Nb2RlID8gMTUwIDogMDsnCmlmIGluaXQgbm90IGluIHM6IHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBFeHBlZGl0aW9uIGluaXQgYmFubmVyIGFuY2hvciBtaXNzaW5nJykKcz1zLnJlcGxhY2UoaW5pdCxpbml0KydcbiAgICBleHBlZGl0aW9uQmFubmVyRHJhd24gPSAwOycsMSkKCmEsYj1zcGFuKHMsJ3VwZGF0ZUV4cGVkaXRpb25Qcm9ncmVzcycpCnByb2dyZXNzPSIiInN0YXRpYyB2b2lkIHVwZGF0ZUV4cGVkaXRpb25Qcm9ncmVzcyh2b2lkKSB7CiAgICBpZiAoIWV4cGVkaXRpb25Nb2RlKSByZXR1cm47CiAgICBpbnQgdGFyZ2V0ID0gc2NvcmUgPj0gNTAwMCA/IDEgOiAwOwogICAgaWYgKHRhcmdldCAhPSBleHBlZGl0aW9uU2VjdG9yKSB7CiAgICAgICAgZXhwZWRpdGlvblNlY3RvciA9IHRhcmdldDsKICAgICAgICBleHBlZGl0aW9uQmFubmVyRnJhbWVzID0gMTUwOwogICAgICAgIGV4cGVkaXRpb25CYW5uZXJEcmF3biA9IDA7CiAgICB9CiAgICBleHBlZGl0aW9uVmlzdWFsRnJhbWUrKzsKfSIiIgpzPXNbOmFdK3Byb2dyZXNzK3NbYjpdCgphLGI9c3BhbihzLCdkcmF3RXhwZWRpdGlvbkhVRCcpCmh1ZD0iIiJzdGF0aWMgdm9pZCBkcmF3RXhwZWRpdGlvbkhVRCh2b2lkKSB7CiAgICBpZiAoIWV4cGVkaXRpb25Nb2RlKSByZXR1cm47CiAgICBjaGFyIGxpbmVbMjhdOwogICAgc25wcmludGYobGluZSwgc2l6ZW9mKGxpbmUpLCBcIkVYUCAlZC81XCIsIGV4cGVkaXRpb25TZWN0b3IgKyAxKTsKICAgIGRyYXdTaGFkb3dTdHJpbmcoMiwgMTkwLCBsaW5lLCBDT0xfWUVMTE9XKTsKfSIiIgpzPXNbOmFdK2h1ZCtzW2I6XQoKbWFya2VyPSdzdGF0aWMgdm9pZCBkcmF3RXhwZWRpdGlvbkhVRCh2b2lkKSB7Jwpwb3M9cy5maW5kKG1hcmtlcikKaWYgcG9zPDA6IHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBIVUQgbWFya2VyIG1pc3NpbmcnKQpiYW5uZXI9IiIic3RhdGljIHZvaWQgZHJhd0V4cGVkaXRpb25CYW5uZXJTdGFibGUodm9pZCkgewogICAgaWYgKCFleHBlZGl0aW9uTW9kZSB8fCBleHBlZGl0aW9uQmFubmVyRnJhbWVzIDw9IDApIHJldHVybjsKICAgIHdhaXRGb3JWQmxhbmsoKTsKICAgIGRyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg1MiwgNDAsIDgyLCA4LCBleHBlZGl0aW9uU2VjdG9yTmFtZSgpLCBDT0xfWUVMTE9XKTsKICAgIGlmIChleHBlZGl0aW9uU2VjdG9yID09IDApIHsKICAgICAgICBkcmF3Q2VudGVyZWRTaGFkb3dTdHJpbmcoNjYsIDQwLCA4MiwgOCwgXCJFWFBFRElUSU9OXCIsIENPTF9XSElURSk7CiAgICAgICAgZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDc4LCA0MCwgODIsIDgsIFwiQkVHSU5TXCIsIENPTF9XSElURSk7CiAgICB9IGVsc2UgewogICAgICAgIGRyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg2NiwgNDAsIDgyLCA4LCBcIlNFQ1RPUiAyXCIsIENPTF9XSElURSk7CiAgICAgICAgZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDc4LCA0MCwgODIsIDgsIFwiUkVBQ0hFRFwiLCBDT0xfV0hJVEUpOwogICAgfQp9XG5cbiIiIgppZiAnc3RhdGljIHZvaWQgZHJhd0V4cGVkaXRpb25CYW5uZXJTdGFibGUodm9pZCknIG5vdCBpbiBzOgogICAgcz1zWzpwb3NdK2Jhbm5lcitzW3BvczpdCgphLGI9c3BhbihzLCdkcmF3RHluYW1pY1NwYWNlVGljaycpCmR5bj1zW2E6Yl0Kb2xkPSIiIiAgICBzcGFjZUFuaW1GcmFtZSsrOwogICAgaWYgKChzcGFjZUFuaW1GcmFtZSAmIDN1KSAhPSAwdSkgewogICAgICAgIGRyYXdFeHBlZGl0aW9uU2VjdG9yQXJ0KCk7CiAgICAgICAgcmV0dXJuOwogICAgfSIiIgpuZXc9IiIiICAgIHNwYWNlQW5pbUZyYW1lKys7CiAgICBpZiAoKHNwYWNlQW5pbUZyYW1lICYgM3UpICE9IDB1KQogICAgICAgIHJldHVybjsKICAgIHdhaXRGb3JWQmxhbmsoKTsiIiIKaWYgb2xkIG5vdCBpbiBkeW46IHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVg4IGR5bmFtaWMgZWFybHktcmV0dXJuIGJsb2NrIG1pc3NpbmcnKQpkeW49ZHluLnJlcGxhY2Uob2xkLG5ldywxKQppZiAnZHJhd0V4cGVkaXRpb25TZWN0b3JBcnQoKTsnIG5vdCBpbiBkeW46IHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVg4IHNlY3Rvci1hcnQgdGFpbCBjYWxsIG1pc3NpbmcnKQpzPXNbOmFdK2R5bitzW2I6XQoKYSxiPXNwYW4ocywncnVuJykKcnVuPXNbYTpiXQpicmFjZT1ydW4uZmluZCgneycpCmdhdGU9IiIiCiAgICBpZiAoZXhwZWRpdGlvbk1vZGUgJiYgZXhwZWRpdGlvbkJhbm5lckZyYW1lcyA+IDApIHsKICAgICAgICBpZiAoIWV4cGVkaXRpb25CYW5uZXJEcmF3bikgewogICAgICAgICAgICBkcmF3RXhwZWRpdGlvbkJhbm5lclN0YWJsZSgpOwogICAgICAgICAgICBleHBlZGl0aW9uQmFubmVyRHJhd24gPSAxOwogICAgICAgIH0KICAgICAgICBleHBlZGl0aW9uQmFubmVyRnJhbWVzLS07CiAgICAgICAgaWYgKGV4cGVkaXRpb25CYW5uZXJGcmFtZXMgPT0gMCkgewogICAgICAgICAgICByZXN0b3JlR2FtZXBsYXlTY3JlZW4oKTsKICAgICAgICAgICAgZHJhd0V4cGVkaXRpb25TZWN0b3JBcnQoKTsKICAgICAgICB9CiAgICAgICAgcmV0dXJuOwogICAgfQoiIiIKaWYgJ2RyYXdFeHBlZGl0aW9uQmFubmVyU3RhYmxlKCk7JyBub3QgaW4gcnVuOgogICAgcnVuPXJ1bls6YnJhY2UrMV0rZ2F0ZStydW5bYnJhY2UrMTpdCnM9c1s6YV0rcnVuK3NbYjpdCgpwcm90bz0nc3RhdGljIHZvaWQgZHJhd0V4cGVkaXRpb25IVUQodm9pZCk7JwppZiBwcm90byBub3QgaW4gczogcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IEV4cGVkaXRpb24gSFVEIHByb3RvdHlwZSBtaXNzaW5nJykKaWYgJ3N0YXRpYyB2b2lkIGRyYXdFeHBlZGl0aW9uQmFubmVyU3RhYmxlKHZvaWQpOycgbm90IGluIHM6CiAgICBzPXMucmVwbGFjZShwcm90byxwcm90bysnXG5zdGF0aWMgdm9pZCBkcmF3RXhwZWRpdGlvbkJhbm5lclN0YWJsZSh2b2lkKTsnLDEpCgpzPXMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC44LjAgRklYOCcsJ01JWU9PIEVESVRJT04gdjAuOC4wIEZJWDknKQpmb3IgZ3VhcmQgaW4gKCdleHBlZGl0aW9uQmFubmVyRHJhd24nLCdkcmF3RXhwZWRpdGlvbkJhbm5lclN0YWJsZSgpOycsJ2RyYXdTaGFkb3dTdHJpbmcoMiwgMTkwJywnTUlZT08gRURJVElPTiB2MC44LjAgRklYOScpOgogICAgaWYgZ3VhcmQgbm90IGluIHM6IHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVg5IGd1YXJkIG1pc3Npbmc6ICcrZ3VhcmQpCnAud3JpdGVfdGV4dChzKQpwcmludCgnQXBwbGllZCBGSVg5IGF0b21pYyBzZWN0b3IgYXJ0ICsgb25lLXNob3Qgc3RhYmxlIGFubm91bmNlbWVudHMnKQo=' | base64 -d > /tmp/v080_fix9.py
-          python3 /tmp/v080_fix9.py
+          python3 - <<'PYFIX10'
+          from pathlib import Path
+          import re
+          p=Path('game.c')
+          s=p.read_text()
 
-      - name: Verify v0.8.0 FIX9 Flicker-Free Expedition overlays
+          def span(src,name):
+              m=re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\b'+re.escape(name)+r'\s*\([^;]*\)\s*\{',src)
+              if not m: raise SystemExit('ERROR: '+name+' definition not found')
+              b=src.find('{',m.start()); d=0
+              for i in range(b,len(src)):
+                  if src[i]=='{': d+=1
+                  elif src[i]=='}':
+                      d-=1
+                      if d==0: return m.start(),i+1
+              raise SystemExit('ERROR: '+name+' closing brace not found')
+
+          glob='static int expeditionBannerFrames = 0;'
+          if glob not in s: raise SystemExit('ERROR: expedition banner global missing')
+          if 'static int expeditionOverlayFrozen = 0;' not in s:
+              s=s.replace(glob,glob+'\nstatic int expeditionOverlayFrozen = 0;',1)
+
+          init='    expeditionBannerFrames = expeditionMode ? 150 : 0;'
+          if init not in s: raise SystemExit('ERROR: expedition init anchor missing')
+          if 'expeditionOverlayFrozen = 0;' not in s[s.find(init):s.find(init)+180]:
+              s=s.replace(init,init+'\n    expeditionOverlayFrozen = 0;',1)
+
+          a,b=span(s,'updateExpeditionProgress')
+          progress='''static void updateExpeditionProgress(void) {
+              if (!expeditionMode) return;
+              int target = score >= 5000 ? 1 : 0;
+              if (target != expeditionSector) {
+                  expeditionSector = target;
+                  expeditionBannerFrames = 150;
+                  expeditionOverlayFrozen = 0;
+              }
+              expeditionVisualFrame++;
+          }'''
+          s=s[:a]+progress+s[b:]
+
+          a,b=span(s,'drawDynamicSpaceTick')
+          dyn=s[a:b]
+          dyn=dyn.replace('    spaceAnimFrame++;\n    if ((spaceAnimFrame & 3u) != 0u) {\n        drawExpeditionSectorArt();\n        return;\n    }','    spaceAnimFrame++;\n    if ((spaceAnimFrame & 3u) != 0u)\n        return;',1)
+          dyn=dyn.replace('\n    drawExpeditionSectorArt();\n}','\n}',1)
+          s=s[:a]+dyn+s[b:]
+
+          a,b=span(s,'drawExpeditionHUD')
+          hud='''static void drawExpeditionHUD(void) {
+              if (!expeditionMode) return;
+              char line[28];
+              snprintf(line, sizeof(line), "EXP %d/5", expeditionSector + 1);
+              drawShadowString(2, 190, line, COL_YELLOW);
+          }'''
+          s=s[:a]+hud+s[b:]
+
+          marker='static void drawExpeditionHUD(void) {'
+          pos=s.find(marker)
+          overlay='''static void drawExpeditionHeldOverlay(void) {
+              if (!expeditionMode) return;
+              drawExpeditionSectorArt();
+              if (expeditionBannerFrames > 0) {
+                  drawCenteredShadowString(52, 40, 82, 8, expeditionSectorName(), COL_YELLOW);
+                  if (expeditionSector == 0) {
+                      drawCenteredShadowString(66, 40, 82, 8, "EXPEDITION", COL_WHITE);
+                      drawCenteredShadowString(78, 40, 82, 8, "BEGINS", COL_WHITE);
+                  } else {
+                      drawCenteredShadowString(66, 40, 82, 8, "SECTOR 2", COL_WHITE);
+                      drawCenteredShadowString(78, 40, 82, 8, "REACHED", COL_WHITE);
+                  }
+              }
+          }
+
+          '''
+          if 'static void drawExpeditionHeldOverlay(void) {' not in s:
+              s=s[:pos]+overlay+s[pos:]
+
+          proto='static void drawExpeditionHUD(void);'
+          if 'static void drawExpeditionHeldOverlay(void);' not in s:
+              s=s.replace(proto,proto+'\nstatic void drawExpeditionHeldOverlay(void);',1)
+
+          a,b=span(s,'run')
+          run=s[a:b]
+          brace=run.find('{')
+          gate='''
+              if (expeditionMode && expeditionOverlayFrozen && expeditionBannerFrames > 0) {
+                  expeditionBannerFrames--;
+                  if (expeditionBannerFrames == 0)
+                      expeditionOverlayFrozen = 0;
+                  return;
+              }
+          '''
+          if 'expeditionOverlayFrozen && expeditionBannerFrames > 0' not in run:
+              run=run[:brace+1]+gate+run[brace+1:]
+
+          pat=re.compile(r'\n\s*if \(expeditionMode &&\s*\n\s*\(state == FALL \|\| state == FLOOD \|\| state == SPAWN \|\| state == SPAWN2 \|\|\s*\n\s*state == CLEAR1 \|\| state == CLEAR2 \|\| state == CLEAR3\)\) \{\s*\n\s*updateExpeditionProgress\(\);\s*\n\s*drawExpeditionHUD\(\);\s*\n\s*\}')
+          repl='''
+              if (expeditionMode &&
+                  (state == FALL || state == FLOOD || state == SPAWN || state == SPAWN2 ||
+                   state == CLEAR1 || state == CLEAR2 || state == CLEAR3)) {
+                  updateExpeditionProgress();
+                  drawExpeditionHUD();
+                  waitForVBlank();
+                  drawExpeditionHeldOverlay();
+                  if (expeditionBannerFrames > 0)
+                      expeditionOverlayFrozen = 1;
+              }'''
+          run2,n=pat.subn(repl,run,count=1)
+          if n != 1: raise SystemExit('ERROR: Expedition end-of-run hook not found exactly once')
+          s=s[:a]+run2+s[b:]
+
+          s=s.replace('MIYOO EDITION v0.8.0 FIX8','MIYOO EDITION v0.8.0 FIX10')
+          for g in ('drawExpeditionHeldOverlay();','expeditionOverlayFrozen','drawCenteredShadowString(52, 40, 82, 8','drawShadowString(2, 190','MIYOO EDITION v0.8.0 FIX10'):
+              if g not in s: raise SystemExit('ERROR: FIX10 guard missing: '+g)
+          p.write_text(s)
+          print('Applied FIX10 exact FIX8 layout with held flicker-free announcement')
+          PYFIX10
+
+      - name: Verify v0.8.0 FIX10 exact-layout flicker fix
         run: |
-          grep -n "expeditionBannerDrawn" game.c
-          grep -n "drawExpeditionBannerStable" game.c
-          grep -n "MIYOO EDITION v0.8.0 FIX9" game.c
+          grep -n "drawExpeditionHeldOverlay" game.c
+          grep -n "expeditionOverlayFrozen" game.c
+          grep -n "drawCenteredShadowString(52, 40, 82, 8" game.c
           grep -n "drawShadowString(2, 190" game.c
+          grep -n "MIYOO EDITION v0.8.0 FIX10" game.c
 
       - name: Build ROM
         run: make
@@ -3025,15 +3140,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX9.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX9.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX9.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX9.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX9
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX9.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX10
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX10.gba"
           if-no-files-found: error
