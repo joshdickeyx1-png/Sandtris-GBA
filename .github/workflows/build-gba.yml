@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX15 Expedition Dynamic Background Restored
+name: Build Sandtris Miyoo Edition v0.8.0 FIX16 Expedition Dynamic Background Restored
 
 on:
   push:
@@ -3040,19 +3040,19 @@ jobs:
           ! grep -q "tileTop < 88" game.c
 
 
-      - name: Apply v0.8.0 Expedition Stage 1 FIX15 Restore Dynamic Background
+      - name: Apply v0.8.0 Expedition Stage 1 FIX16 Restore Dynamic Background
         shell: bash
         run: |
-          echo ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpCnM9cC5yZWFkX3RleHQoKQoKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xccyspPyg/OmlubGluZVxccyspP1tBLVphLXpfXVtcXHdcXHNcXCpdKlxcYicrcmUuZXNjYXBlKG5hbWUpK3InXFxzKlxcKFteO10qXFwpXFxzKlxceycsc3JjKQogICAgaWYgbm90IG06IHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiAnK25hbWUrJyBkZWZpbml0aW9uIG5vdCBmb3VuZCcpCiAgICBiPXNyYy5maW5kKCd7JyxtLnN0YXJ0KCkpOyBkPTAKICAgIGZvciBpIGluIHJhbmdlKGIsbGVuKHNyYykpOgogICAgICAgIGlmIHNyY1tpXT09J3snOiBkKz0xCiAgICAgICAgZWxpZiBzcmNbaV09PSd9JzoKICAgICAgICAgICAgZC09MQogICAgICAgICAgICBpZiBkPT0wOiByZXR1cm4gbS5zdGFydCgpLGkrMQogICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6ICcrbmFtZSsnIGNsb3NpbmcgYnJhY2Ugbm90IGZvdW5kJykKCmEsYj1zcGFuKHMsJ2RyYXdEeW5hbWljU3BhY2VUaWNrJykKZHluPXNbYTpiXQpvbGQgPSAnJycgICAgc3BhY2VBbmltRnJhbWUrKzsKICAgIGlmIChleHBlZGl0aW9uTW9kZSkgewogICAgICAgIGRyYXdFeHBlZGl0aW9uU2VjdG9yQXJ0KCk7CiAgICAgICAgcmV0dXJuOwogICAgfQogICAgaWYgKChzcGFjZUFuaW1GcmFtZSAmIDN1KSAhPSAwdSkKICAgICAgICByZXR1cm47JycnCm5ldyA9ICcnJyAgICBzcGFjZUFuaW1GcmFtZSsrOwogICAgaWYgKChzcGFjZUFuaW1GcmFtZSAmIDN1KSAhPSAwdSkKICAgICAgICByZXR1cm47CgogICAgLy8gRklYMTU6IHVwZGF0ZSB0aGUgbm9ybWFsIGR5bmFtaWMgYmFja2dyb3VuZCBhbmQgRXhwZWRpdGlvbiBhcnQgYXMgb25lCiAgICAvLyBWQmxhbmstY29oZXJlbnQgcGFzcy4gQmFja2dyb3VuZCBmaXJzdCwgc2VjdG9yIGFydCBsYXN0LgogICAgaWYgKGV4cGVkaXRpb25Nb2RlKQogICAgICAgIHdhaXRGb3JWQmxhbmsoKTsnJycKaWYgb2xkIG5vdCBpbiBkeW46CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogRklYMTQgRXhwZWRpdGlvbiBkeW5hbWljLXNwYWNlIG93bmVyc2hpcCBoZWFkZXIgbm90IGZvdW5kJykKZHluPWR5bi5yZXBsYWNlKG9sZCxuZXcsMSkKb2xkcmV0ID0gJycnICAgIGlmICghY29zbWljRW5hYmxlZCkKICAgICAgICByZXR1cm47JycnCm5ld3JldCA9ICcnJyAgICBpZiAoIWNvc21pY0VuYWJsZWQpIHsKICAgICAgICBpZiAoZXhwZWRpdGlvbk1vZGUpCiAgICAgICAgICAgIGRyYXdFeHBlZGl0aW9uU2VjdG9yQXJ0KCk7CiAgICAgICAgcmV0dXJuOwogICAgfScnJwppZiBvbGRyZXQgbm90IGluIGR5bjoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBkeW5hbWljLXNwYWNlIG5vbi1Db3NtaWMgcmV0dXJuIG5vdCBmb3VuZCcpCmR5bj1keW4ucmVwbGFjZShvbGRyZXQsbmV3cmV0LDEpCmNsb3NlPWR5bi5yZmluZCgnfScpCmlmIGNsb3NlIDwgMDoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBkcmF3RHluYW1pY1NwYWNlVGljayBjbG9zaW5nIGJyYWNlIG1pc3NpbmcnKQppZiAnRklYMTU6IHNlY3RvciBhcnQgZmluYWwgbGF5ZXInIG5vdCBpbiBkeW46CiAgICB0YWlsID0gJycnXG5cbiAgICAvLyBGSVgxNTogc2VjdG9yIGFydCBmaW5hbCBsYXllciAtLSBuZXZlciBsZXQgc3RhcnMvbmVidWxhIG92ZXJ3cml0ZSBpdC5cbiAgICBpZiAoZXhwZWRpdGlvbk1vZGUpXG4gICAgICAgIGRyYXdFeHBlZGl0aW9uU2VjdG9yQXJ0KCk7XG4nJycKICAgIGR5bj1keW5bOmNsb3NlXS5yc3RyaXAoKSt0YWlsK2R5bltjbG9zZTpdCnM9c1s6YV0rZHluK3NbYjpdCnM9cy5yZXBsYWNlKCdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgxNCcsJ01JWU9PIEVESVRJT04gdjAuOC4wIEZJWDE1JykKZm9yIHRva2VuIGluICgnRklYMTU6IHVwZGF0ZSB0aGUgbm9ybWFsIGR5bmFtaWMgYmFja2dyb3VuZCcsCiAgICAgICAgICAgICAgJ0ZJWDE1OiBzZWN0b3IgYXJ0IGZpbmFsIGxheWVyJywKICAgICAgICAgICAgICAnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDUyLCA0MCwgODIsIDgnLAogICAgICAgICAgICAgICdkcmF3U2hhZG93U3RyaW5nKDIsIDE5MCcsCiAgICAgICAgICAgICAgJ2V4cGVkaXRpb25BcnRTZWN0b3JEcmF3biA9IC0xJywKICAgICAgICAgICAgICAnTUlZT08gRURJVElPTiB2MC44LjAgRklYMTUnKToKICAgIGlmIHRva2VuIG5vdCBpbiBzOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVgxNSBndWFyZCBtaXNzaW5nOiAnK3Rva2VuKQpwLndyaXRlX3RleHQocykKcHJpbnQoJ0FwcGxpZWQgRklYMTU6IHJlc3RvcmVkIGR5bmFtaWMgYmFja2dyb3VuZCB3aGlsZSBwcmVzZXJ2aW5nIGZsaWNrZXItZnJlZSBFeHBlZGl0aW9uIGFydCcpCg== | base64 -d > /tmp/fix15_patch.py
+          echo ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpCnM9cC5yZWFkX3RleHQoKQoKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xzKyk/KD86aW5saW5lXHMrKT9bQS1aYS16X11bXHdcc1wqXSpcYicrcmUuZXNjYXBlKG5hbWUpK3InXHMqXChbXjtdKlwpXHMqXHsnLHNyYykKICAgIGlmIG5vdCBtOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJytuYW1lKycgZGVmaW5pdGlvbiBub3QgZm91bmQnKQogICAgYj1zcmMuZmluZCgneycsbS5zdGFydCgpKTsgZD0wCiAgICBmb3IgaSBpbiByYW5nZShiLGxlbihzcmMpKToKICAgICAgICBpZiBzcmNbaV09PSd7JzogZCs9MQogICAgICAgIGVsaWYgc3JjW2ldPT0nfSc6CiAgICAgICAgICAgIGQtPTEKICAgICAgICAgICAgaWYgZD09MDogcmV0dXJuIG0uc3RhcnQoKSxpKzEKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiAnK25hbWUrJyBjbG9zaW5nIGJyYWNlIG5vdCBmb3VuZCcpCgphLGI9c3BhbihzLCdkcmF3RHluYW1pY1NwYWNlVGljaycpCmR5bj1zW2E6Yl0Kb2xkID0gJycnICAgIHNwYWNlQW5pbUZyYW1lKys7CiAgICBpZiAoZXhwZWRpdGlvbk1vZGUpIHsKICAgICAgICBkcmF3RXhwZWRpdGlvblNlY3RvckFydCgpOwogICAgICAgIHJldHVybjsKICAgIH0KICAgIGlmICgoc3BhY2VBbmltRnJhbWUgJiAzdSkgIT0gMHUpCiAgICAgICAgcmV0dXJuOycnJwpuZXcgPSAnJycgICAgc3BhY2VBbmltRnJhbWUrKzsKICAgIGlmICgoc3BhY2VBbmltRnJhbWUgJiAzdSkgIT0gMHUpCiAgICAgICAgcmV0dXJuOwoKICAgIC8vIEZJWDE1OiB1cGRhdGUgdGhlIG5vcm1hbCBkeW5hbWljIGJhY2tncm91bmQgYW5kIEV4cGVkaXRpb24gYXJ0IGFzIG9uZQogICAgLy8gVkJsYW5rLWNvaGVyZW50IHBhc3MuIEJhY2tncm91bmQgZmlyc3QsIHNlY3RvciBhcnQgbGFzdC4KICAgIGlmIChleHBlZGl0aW9uTW9kZSkKICAgICAgICB3YWl0Rm9yVkJsYW5rKCk7JycnCmlmIG9sZCBub3QgaW4gZHluOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IEZJWDE0IEV4cGVkaXRpb24gZHluYW1pYy1zcGFjZSBvd25lcnNoaXAgaGVhZGVyIG5vdCBmb3VuZCcpCmR5bj1keW4ucmVwbGFjZShvbGQsbmV3LDEpCm9sZHJldCA9ICcnJyAgICBpZiAoIWNvc21pY0VuYWJsZWQpCiAgICAgICAgcmV0dXJuOycnJwpuZXdyZXQgPSAnJycgICAgaWYgKCFjb3NtaWNFbmFibGVkKSB7CiAgICAgICAgaWYgKGV4cGVkaXRpb25Nb2RlKQogICAgICAgICAgICBkcmF3RXhwZWRpdGlvblNlY3RvckFydCgpOwogICAgICAgIHJldHVybjsKICAgIH0nJycKaWYgb2xkcmV0IG5vdCBpbiBkeW46CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogZHluYW1pYy1zcGFjZSBub24tQ29zbWljIHJldHVybiBub3QgZm91bmQnKQpkeW49ZHluLnJlcGxhY2Uob2xkcmV0LG5ld3JldCwxKQpjbG9zZT1keW4ucmZpbmQoJ30nKQppZiBjbG9zZSA8IDA6CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogZHJhd0R5bmFtaWNTcGFjZVRpY2sgY2xvc2luZyBicmFjZSBtaXNzaW5nJykKaWYgJ0ZJWDE1OiBzZWN0b3IgYXJ0IGZpbmFsIGxheWVyJyBub3QgaW4gZHluOgogICAgdGFpbCA9ICcnJ1xuXG4gICAgLy8gRklYMTU6IHNlY3RvciBhcnQgZmluYWwgbGF5ZXIgLS0gbmV2ZXIgbGV0IHN0YXJzL25lYnVsYSBvdmVyd3JpdGUgaXQuXG4gICAgaWYgKGV4cGVkaXRpb25Nb2RlKVxuICAgICAgICBkcmF3RXhwZWRpdGlvblNlY3RvckFydCgpO1xuJycnCiAgICBkeW49ZHluWzpjbG9zZV0ucnN0cmlwKCkrdGFpbCtkeW5bY2xvc2U6XQpzPXNbOmFdK2R5bitzW2I6XQpzPXMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC44LjAgRklYMTQnLCdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgxNicpCmZvciB0b2tlbiBpbiAoJ0ZJWDE1OiB1cGRhdGUgdGhlIG5vcm1hbCBkeW5hbWljIGJhY2tncm91bmQnLAogICAgICAgICAgICAgICdGSVgxNTogc2VjdG9yIGFydCBmaW5hbCBsYXllcicsCiAgICAgICAgICAgICAgJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg1MiwgNDAsIDgyLCA4JywKICAgICAgICAgICAgICAnZHJhd1NoYWRvd1N0cmluZygyLCAxOTAnLAogICAgICAgICAgICAgICdleHBlZGl0aW9uQXJ0U2VjdG9yRHJhd24gPSAtMScsCiAgICAgICAgICAgICAgJ01JWU9PIEVESVRJT04gdjAuOC4wIEZJWDE2Jyk6CiAgICBpZiB0b2tlbiBub3QgaW4gczoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogRklYMTYgZ3VhcmQgbWlzc2luZzogJyt0b2tlbikKcC53cml0ZV90ZXh0KHMpCnByaW50KCdBcHBsaWVkIEZJWDE2OiBGSVgxNSBkeW5hbWljIGJhY2tncm91bmQgcmVzdG9yYXRpb24gd2l0aCBjb3JyZWN0ZWQgZnVuY3Rpb24gcGFyc2VyJykK | base64 -d > /tmp/fix15_patch.py
           python3 /tmp/fix15_patch.py
 
-      - name: Verify v0.8.0 FIX15 dynamic background integration
+      - name: Verify v0.8.0 FIX16 dynamic background integration
         run: |
           grep -n "FIX15: update the normal dynamic background" game.c
           grep -n "FIX15: sector art final layer" game.c
           grep -n "drawCenteredShadowString(52, 40, 82, 8" game.c
           grep -n "drawShadowString(2, 190" game.c
-          grep -n "MIYOO EDITION v0.8.0 FIX15" game.c
+          grep -n "MIYOO EDITION v0.8.0 FIX16" game.c
 
       - name: Build ROM
         run: make
@@ -3060,15 +3060,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX15.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX15.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX15.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX15.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX15
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX15.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX16
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX16.gba"
           if-no-files-found: error
