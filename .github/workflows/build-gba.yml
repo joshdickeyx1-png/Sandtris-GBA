@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX12 Expedition No-Overwrite Overlay
+name: Build Sandtris Miyoo Edition v0.8.0 FIX13 Expedition No-Overwrite Overlay
 
 on:
   push:
@@ -3020,21 +3020,26 @@ jobs:
           grep -n "drawShadowString(2, 190" game.c
           grep -n "MIYOO EDITION v0.8.0 FIX12" game.c
 
+      - name: FIX13 compile correction
+        run: |
+          sed -i 's/static void drawMilestoneEffect(void) {/static void __attribute__((used)) drawMilestoneEffect(void) {/' game.c
+          grep -n "drawMilestoneEffect" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX12.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX12.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX12.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX12.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX12
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX12.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX13
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
           if-no-files-found: error
