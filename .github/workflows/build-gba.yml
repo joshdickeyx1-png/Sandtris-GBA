@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX13 Expedition No-Overwrite Overlay
+name: Build Sandtris Miyoo Edition v0.8.0 FIX14 Expedition Gameplay-Safe Overlay
 
 on:
   push:
@@ -3025,21 +3025,35 @@ jobs:
           sed -i 's/static void drawMilestoneEffect(void) {/static void __attribute__((used)) drawMilestoneEffect(void) {/' game.c
           grep -n "drawMilestoneEffect" game.c
 
+      - name: Apply v0.8.0 Expedition Stage 1 FIX14 Gameplay-Safe Overlay
+        shell: bash
+        run: |
+          echo ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpCnM9cC5yZWFkX3RleHQoKQoKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xzKyk/KD86aW5saW5lXHMrKT9bQS1aYS16X11bXHdcc1wqXSpcYicrcmUuZXNjYXBlKG5hbWUpK3InXHMqXChbXjtdKlwpXHMqXHsnLHNyYykKICAgIGlmIG5vdCBtOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJytuYW1lKycgZGVmaW5pdGlvbiBub3QgZm91bmQnKQogICAgYj1zcmMuZmluZCgneycsbS5zdGFydCgpKTsgZD0wCiAgICBmb3IgaSBpbiByYW5nZShiLGxlbihzcmMpKToKICAgICAgICBpZiBzcmNbaV09PSd7JzogZCs9MQogICAgICAgIGVsaWYgc3JjW2ldPT0nfSc6CiAgICAgICAgICAgIGQtPTEKICAgICAgICAgICAgaWYgZD09MDogcmV0dXJuIG0uc3RhcnQoKSxpKzEKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiAnK25hbWUrJyBjbG9zaW5nIGJyYWNlIG5vdCBmb3VuZCcpCgpnPSdzdGF0aWMgaW50IGV4cGVkaXRpb25WaXN1YWxGcmFtZSA9IDA7JwppZiBnIG5vdCBpbiBzOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IGV4cGVkaXRpb24gdmlzdWFsIGdsb2JhbCBtaXNzaW5nJykKaWYgJ3N0YXRpYyBpbnQgZXhwZWRpdGlvbkFydFNlY3RvckRyYXduID0gLTE7JyBub3QgaW4gczoKICAgIHM9cy5yZXBsYWNlKGcsZysnXG5zdGF0aWMgaW50IGV4cGVkaXRpb25BcnRTZWN0b3JEcmF3biA9IC0xOycsMSkKCmEsYj1zcGFuKHMsJ2RyYXdCb2FyZCcpCmJvYXJkPSIiInZvaWQgZHJhd0JvYXJkKHZvaWQpIHsKICAgIGRyYXdJbWFnZURNQTMyKDAsIEJPQVJEX1hfT0ZGU0VULCBCT0FSRF9XSURUSCArIDIsIEJPQVJEX0hFSUdIVCwKICAgICAgICAgICAgICAgICAgIChjb25zdCB1bnNpZ25lZCBzaG9ydCAqKWJvYXJkKTsKICAgIGRyYXdNaWxlc3RvbmVFZmZlY3QoKTsKfSIiIgpzPXNbOmFdK2JvYXJkK3NbYjpdCgphLGI9c3BhbihzLCdkcmF3UGllY2UnKQpwaWVjZT1zW2E6Yl0KZ3VhcmQ9IiIiICAgICAgICBpZiAoZXhwZWRpdGlvbk1vZGUgJiYgZXhwZWRpdGlvbkJhbm5lckZyYW1lcyA+IDApIHsKICAgICAgICAgICAgaW50IHRpbGVUb3AgPSBwaWVjZUN1cnIueSArIGNlbGxbMV07CiAgICAgICAgICAgIGlmICh0aWxlVG9wIDwgODggJiYgdGlsZVRvcCArIDcgPj0gNTApCiAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICB9IiIiCmlmIGd1YXJkIG5vdCBpbiBwaWVjZToKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVgxMiBkcmF3UGllY2UgYmFubmVyIGd1YXJkIG5vdCBmb3VuZCcpCnBpZWNlPXBpZWNlLnJlcGxhY2UoZ3VhcmQsJycsMSkKcz1zWzphXStwaWVjZStzW2I6XQoKYSxiPXNwYW4ocywnZHJhd0V4cGVkaXRpb25TZWN0b3JBcnQnKQphcnQ9c1thOmJdCm5lZWRsZT0iIiIgICAgaWYgKCFleHBlZGl0aW9uTW9kZSkgcmV0dXJuOwogICAgaWYgKGV4cGVkaXRpb25TZWN0b3IgPT0gMCkgeyIiIgpyZXBsYWNlbWVudD0iIiIgICAgaWYgKCFleHBlZGl0aW9uTW9kZSkgcmV0dXJuOwogICAgaWYgKGV4cGVkaXRpb25BcnRTZWN0b3JEcmF3biAhPSBleHBlZGl0aW9uU2VjdG9yKSB7CiAgICAgICAgd2FpdEZvclZCbGFuaygpOwogICAgICAgIGRyYXdSZWN0RE1BKDAsIDAsIDM4LCBIRUlHSFQsIENPTF9CTEFDSyk7CiAgICAgICAgZXhwZWRpdGlvbkFydFNlY3RvckRyYXduID0gZXhwZWRpdGlvblNlY3RvcjsKICAgIH0KICAgIGlmIChleHBlZGl0aW9uU2VjdG9yID09IDApIHsiIiIKaWYgbmVlZGxlIG5vdCBpbiBhcnQ6CiAgICByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogRXhwZWRpdGlvbiBzZWN0b3IgYXJ0IGhlYWRlciBub3QgZm91bmQnKQphcnQ9YXJ0LnJlcGxhY2UobmVlZGxlLHJlcGxhY2VtZW50LDEpCnM9c1s6YV0rYXJ0K3NbYjpdCgpzPXMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC44LjAgRklYMTInLCdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgxNCcpCmZvciB0b2tlbiBpbiAoJ2V4cGVkaXRpb25BcnRTZWN0b3JEcmF3biA9IC0xJywnZHJhd01pbGVzdG9uZUVmZmVjdCgpOycsJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg1MiwgNDAsIDgyLCA4JywnZHJhd1NoYWRvd1N0cmluZygyLCAxOTAnLCdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgxNCcpOgogICAgaWYgdG9rZW4gbm90IGluIHM6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IEZJWDE0IGd1YXJkIG1pc3Npbmc6ICcrdG9rZW4pCnAud3JpdGVfdGV4dChzKQpwcmludCgnQXBwbGllZCBGSVgxNDogdmlzaWJsZSBwaWVjZXMgdW5kZXIgYW5ub3VuY2VtZW50ICsgb25lLXNlY3Rvci1hdC1hLXRpbWUgYXJ0JykK | base64 -d > /tmp/fix14_patch.py
+          python3 /tmp/fix14_patch.py
+
+      - name: Verify v0.8.0 FIX14 gameplay-safe overlay
+        run: |
+          grep -n "expeditionArtSectorDrawn" game.c
+          grep -n "drawMilestoneEffect();" game.c
+          grep -n "drawCenteredShadowString(52, 40, 82, 8" game.c
+          grep -n "MIYOO EDITION v0.8.0 FIX14" game.c
+          ! grep -q "tileTop < 88" game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX14.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX14.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX14.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX14.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX13
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX13.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX14
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX14.gba"
           if-no-files-found: error
