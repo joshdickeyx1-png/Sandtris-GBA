@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX20 Expedition Reclaimed Dynamic Event Zone
+name: Build Sandtris Miyoo Edition v0.8.0 FIX21 Expedition Aligned Announcement Earth Stable
 
 on:
   push:
@@ -3114,21 +3114,37 @@ jobs:
           grep -n '#define BOARD_X_OFFSET 72' game.h
           grep -n 'MIYOO EDITION v0.8.0 FIX20' game.c
 
+
+      - name: Apply v0.8.0 Expedition Stage 1 FIX21 Announcement Alignment and Earth Flicker Fix
+        shell: bash
+        run: |
+          echo ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpCnM9cC5yZWFkX3RleHQoKQoKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xzKyk/KD86aW5saW5lXHMrKT9bQS1aYS16X11bXHdcc1wqXSpcYicrcmUuZXNjYXBlKG5hbWUpK3InXHMqXChbXjtdKlwpXHMqXHsnLHNyYykKICAgIGlmIG5vdCBtOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJytuYW1lKycgZGVmaW5pdGlvbiBub3QgZm91bmQnKQogICAgYj1zcmMuZmluZCgneycsbS5zdGFydCgpKTsgZD0wCiAgICBmb3IgaSBpbiByYW5nZShiLGxlbihzcmMpKToKICAgICAgICBpZiBzcmNbaV09PSd7JzogZCs9MQogICAgICAgIGVsaWYgc3JjW2ldPT0nfSc6CiAgICAgICAgICAgIGQtPTEKICAgICAgICAgICAgaWYgZD09MDogcmV0dXJuIG0uc3RhcnQoKSxpKzEKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiAnK25hbWUrJyBjbG9zaW5nIGJyYWNlIG5vdCBmb3VuZCcpCgojIE1vdmUgYWxsIEV4cGVkaXRpb24gYW5ub3VuY2VtZW50IGxpbmVzIHNvIHRoZXkgYXJlIGNlbnRlcmVkIG92ZXIgdGhlIGFwcHJvdmVkIHg9NzIgcGxheWZpZWxkLgphLGI9c3BhbihzLCdkcmF3RXhwZWRpdGlvbkhVRCcpCmh1ZD1zW2E6Yl0KaHVkLG49cmUuc3VibihyJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZ1woKDUyfDY2fDc4KSxccyo0MCxccyo4Mixccyo4JywKICAgICAgICAgICAgICByJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyhcMSwgNzIsIDgyLCA4JyxodWQpCmlmIG4gPCAzOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IGV4cGVjdGVkIGF0IGxlYXN0IDMgRXhwZWRpdGlvbiBhbm5vdW5jZW1lbnQgY29vcmRpbmF0ZXMsIGNoYW5nZWQgJytzdHIobikpCnM9c1s6YV0raHVkK3NbYjpdCgojIEtlZXAgdGhlIGFscmVhZHktZHJhd24gRWFydGggdW5kZXJuZWF0aCB0aGUgYW5pbWF0aW9uIHBhc3MgaW5zdGVhZCBvZiBibGFjay1jbGVhcmluZyBpdAojIGV2ZXJ5IHRpY2suIEEgZnVsbCBjbGVhciBzdGlsbCBoYXBwZW5zIG9uY2Ugb24gc2VjdG9yIGNoYW5nZXMgc28gbm8gc3RhbGUgc2VjdG9yIGFydCBzdXJ2aXZlcy4KYSxiPXNwYW4ocywnZHJhd0R5bmFtaWNTcGFjZVRpY2snKQpkeW49c1thOmJdCm9sZD0nJycgICAgICAgIGRyYXdSZWN0RE1BMzIoMCwgMCwgNzIsIEhFSUdIVCwgQ09MX0JMQUNLKTsnJycKbmV3PScnJyAgICAgICAgLyogRklYMjE6IEVhcnRoIHBlcnNpc3RlbmNlIGd1YXJkLiBUaGUgRklYMjAgZnVsbC16b25lIGNsZWFyIHdhcyB2aXN1YWxseSBjb3JyZWN0LAogICAgICAgICAgIGJ1dCBpdCBleHBvc2VkIGJsYWNrIHBpeGVscyB3aGlsZSB0aGUgbGFyZ2UgRWFydGggd2FzIGJlaW5nIHJlZHJhd24uIENsZWFyIHRoZQogICAgICAgICAgIHdob2xlIGV2ZW50IHpvbmUgb25seSBvbmNlIHdoZW4gYSBzZWN0b3IgY2hhbmdlcy4gRHVyaW5nIEVhcnRoIE9yYml0LCBwcmVzZXJ2ZQogICAgICAgICAgIGl0cyA0NXg0NSBmb290cHJpbnQgYW5kIGNsZWFyIG9ubHkgYXJvdW5kIGl0OyB0aGUgZHluYW1pYyBiYWNrZ3JvdW5kIGFuZCBFYXJ0aAogICAgICAgICAgIGFyZSB0aGVuIGxheWVyZWQgb3ZlciBhbiBhbHJlYWR5LXZhbGlkIEVhcnRoIGltYWdlLCBlbGltaW5hdGluZyB0aGUgYmxhY2sgYmFyLiAqLwogICAgICAgIHN0YXRpYyBpbnQgZml4MjFQcmVwYXJlZFNlY3RvciA9IC0xOwogICAgICAgIGlmIChmaXgyMVByZXBhcmVkU2VjdG9yICE9IGV4cGVkaXRpb25TZWN0b3IpIHsKICAgICAgICAgICAgZHJhd1JlY3RETUEzMigwLCAwLCA3MiwgSEVJR0hULCBDT0xfQkxBQ0spOwogICAgICAgICAgICBmaXgyMVByZXBhcmVkU2VjdG9yID0gZXhwZWRpdGlvblNlY3RvcjsKICAgICAgICB9IGVsc2UgaWYgKGV4cGVkaXRpb25TZWN0b3IgPT0gMCkgewogICAgICAgICAgICBkcmF3UmVjdERNQSgwLCAwLCA3MiwgOTQsIENPTF9CTEFDSyk7CiAgICAgICAgICAgIGRyYXdSZWN0RE1BKDk0LCAwLCA5LCA0NSwgQ09MX0JMQUNLKTsKICAgICAgICAgICAgZHJhd1JlY3RETUEoOTQsIDU0LCAxOCwgNDUsIENPTF9CTEFDSyk7CiAgICAgICAgICAgIGRyYXdSZWN0RE1BKDEzOSwgMCwgNzIsIEhFSUdIVCAtIDEzOSwgQ09MX0JMQUNLKTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBkcmF3UmVjdERNQTMyKDAsIDAsIDcyLCBIRUlHSFQsIENPTF9CTEFDSyk7CiAgICAgICAgfScnJwppZiBvbGQgbm90IGluIGR5bjoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVgyMCBmdWxsIGV2ZW50LXpvbmUgY2xlYXIgYW5jaG9yIG5vdCBmb3VuZCcpCmR5bj1keW4ucmVwbGFjZShvbGQsbmV3LDEpCnM9c1s6YV0rZHluK3NbYjpdCgpzPXMucmVwbGFjZSgnTUlZT08gRURJVElPTiB2MC44LjAgRklYMjAnLCdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgyMScsMSkKZm9yIHRva2VuIGluICgnZHJhd0NlbnRlcmVkU2hhZG93U3RyaW5nKDUyLCA3MiwgODIsIDgnLAogICAgICAgICAgICAgICdkcmF3Q2VudGVyZWRTaGFkb3dTdHJpbmcoNjYsIDcyLCA4MiwgOCcsCiAgICAgICAgICAgICAgJ2RyYXdDZW50ZXJlZFNoYWRvd1N0cmluZyg3OCwgNzIsIDgyLCA4JywKICAgICAgICAgICAgICAnZml4MjFQcmVwYXJlZFNlY3RvciA9IC0xJywKICAgICAgICAgICAgICAnZHJhd1JlY3RETUEoOTQsIDU0LCAxOCwgNDUsIENPTF9CTEFDSyknLAogICAgICAgICAgICAgICdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgyMScpOgogICAgaWYgdG9rZW4gbm90IGluIHM6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgnRVJST1I6IEZJWDIxIGd1YXJkIG1pc3Npbmc6ICcrdG9rZW4pCnAud3JpdGVfdGV4dChzKQpwcmludCgnQXBwbGllZCBGSVgyMTogcGxheWZpZWxkLWFsaWduZWQgYW5ub3VuY2VtZW50cyArIHBlcnNpc3RlbnQgRWFydGggZm9vdHByaW50JykK | base64 -d > /tmp/fix21_patch.py
+          python3 /tmp/fix21_patch.py
+
+      - name: Verify v0.8.0 FIX21 alignment and Earth stability
+        run: |
+          grep -n 'drawCenteredShadowString(52, 72, 82, 8' game.c
+          grep -n 'drawCenteredShadowString(66, 72, 82, 8' game.c
+          grep -n 'drawCenteredShadowString(78, 72, 82, 8' game.c
+          grep -n 'fix21PreparedSector = -1' game.c
+          grep -n 'drawRectDMA(94, 54, 18, 45, COL_BLACK)' game.c
+          grep -n 'MIYOO EDITION v0.8.0 FIX21' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX21.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX21.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX21.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX21.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX20
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX21
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX21.gba"
           if-no-files-found: error
