@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX19 Expedition Cosmic Event Zone Compile Fix
+name: Build Sandtris Miyoo Edition v0.8.0 FIX20 Expedition Reclaimed Dynamic Event Zone
 
 on:
   push:
@@ -3099,21 +3099,36 @@ jobs:
           sed -i '/static int expeditionArtSectorDrawn = -1;/d' game.c
           ! grep -q 'expeditionArtSectorDrawn' game.c
 
+
+      - name: Apply v0.8.0 Expedition Stage 1 FIX20 Reclaim Old Playfield as Dynamic Space
+        shell: bash
+        run: |
+          echo ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoJ2dhbWUuYycpCnM9cC5yZWFkX3RleHQoKQoKZGVmIHNwYW4oc3JjLG5hbWUpOgogICAgbT1yZS5zZWFyY2gocicoP20pXig/OnN0YXRpY1xzKyk/KD86aW5saW5lXHMrKT9bQS1aYS16X11bXHdcc1wqXSpcYicrcmUuZXNjYXBlKG5hbWUpK3InXHMqXChbXjtdKlwpXHMqXHsnLHNyYykKICAgIGlmIG5vdCBtOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogJytuYW1lKycgZGVmaW5pdGlvbiBub3QgZm91bmQnKQogICAgYj1zcmMuZmluZCgneycsbS5zdGFydCgpKTsgZD0wCiAgICBmb3IgaSBpbiByYW5nZShiLGxlbihzcmMpKToKICAgICAgICBpZiBzcmNbaV09PSd7JzogZCs9MQogICAgICAgIGVsaWYgc3JjW2ldPT0nfSc6CiAgICAgICAgICAgIGQtPTEKICAgICAgICAgICAgaWYgZD09MDogcmV0dXJuIG0uc3RhcnQoKSxpKzEKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiAnK25hbWUrJyBjbG9zaW5nIGJyYWNlIG5vdCBmb3VuZCcpCgphLGI9c3BhbihzLCdkcmF3RHluYW1pY1NwYWNlVGljaycpCmR5bj1zW2E6Yl0KYW5jaG9yPSIiIiAgICBpZiAoZXhwZWRpdGlvbk1vZGUpCiAgICAgICAgd2FpdEZvclZCbGFuaygpOyIiIgppZiBhbmNob3Igbm90IGluIGR5bjoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0VSUk9SOiBGSVgxNiBFeHBlZGl0aW9uIFZCbGFuayBhbmNob3Igbm90IGZvdW5kJykKYnJhbmNoPXInJycgICAgaWYgKGV4cGVkaXRpb25Nb2RlKQogICAgICAgIHdhaXRGb3JWQmxhbmsoKTsKCiAgICAvKiBGSVgyMDogdGhlIGJvYXJkIG1vdmVkIGZyb20geD00MCB0byB4PTcyLiBSZWNsYWltIHRoZSBlbnRpcmUgb2xkCiAgICAgICBwbGF5ZmllbGQgc3RyaXAgYXMgdGhlIEV4cGVkaXRpb24gZXZlbnQgem9uZSBldmVyeSBhbmltYXRpb24gdGljay4KICAgICAgIENsZWFyaW5nIGFuZCByZWJ1aWxkaW5nIHRoaXMgMC4uNzEgcmVnaW9uIHJlbW92ZXMgdGhlIG9sZCBiYWtlZC1pbgogICAgICAgYm9yZGVyLCBleHBpcmVkIGFubm91bmNlbWVudCBwaXhlbHMsIGFuZCBwcmV2aW91cy1zZWN0b3IgYXJ0LiAqLwogICAgaWYgKGV4cGVkaXRpb25Nb2RlKSB7CiAgICAgICAgc3RhdGljIGNvbnN0IHVuc2lnbmVkIGNoYXIgc3hbMjRdID0gewogICAgICAgICAgICAzLDgsMTMsMTgsMjMsMjksMzUsNDEsNDcsNTMsNTksNjYsCiAgICAgICAgICAgIDYsMTYsMjcsMzgsNDQsNTAsNTcsNjMsMTAsMzIsNTUsNjkKICAgICAgICB9OwogICAgICAgIHN0YXRpYyBjb25zdCB1bnNpZ25lZCBjaGFyIHN5WzI0XSA9IHsKICAgICAgICAgICAgOSwyMiwzNiw1MSw2OCw4NCwxMDEsMTE5LDEzNiwxNDksNDEsOTcsCiAgICAgICAgICAgIDEyOCw2MSwxNSw3NSwxMDgsMjgsMTQ1LDg4LDExNCwxMzIsNTQsMTkKICAgICAgICB9OwogICAgICAgIHUzMiBwaGFzZSA9IHNwYWNlQW5pbUZyYW1lID4+IDI7CgogICAgICAgIGRyYXdSZWN0RE1BMzIoMCwgMCwgNzIsIEhFSUdIVCwgQ09MX0JMQUNLKTsKCiAgICAgICAgZm9yIChpbnQgaSA9IDA7IGkgPCAyNDsgaSsrKSB7CiAgICAgICAgICAgIGludCB5ID0gKChpbnQpc3lbaV0gKyAoaW50KSgocGhhc2UgKiAodTMyKSgxICsgKGkgJiAxKSkpICUgSEVJR0hUKSkgJSBIRUlHSFQ7CiAgICAgICAgICAgIHUxNiBjID0gKCgocGhhc2UgKyAodTMyKWkgKiAzdSkgJiA3dSkgPT0gMHUpID8gQ09MX1dISVRFIDoKICAgICAgICAgICAgICAgICAgICAoKCgocGhhc2UgKyAodTMyKWkpICYgM3UpID09IDB1KSA/IDB4N0YxOCA6IDB4NDIxMCk7CiAgICAgICAgICAgIHNldFBpeGVsKHksIChpbnQpc3hbaV0sIGMpOwogICAgICAgICAgICBpZiAoKGkgJSA3KSA9PSAwICYmIHN4W2ldIDwgNzApCiAgICAgICAgICAgICAgICBzZXRQaXhlbCh5LCAoaW50KXN4W2ldICsgMSwgYyk7CiAgICAgICAgfQoKICAgICAgICBpbnQgbmViWSA9IDI0ICsgKGludCkoKHBoYXNlICogMnUpICUgOTZ1KTsKICAgICAgICBkcmF3UmVjdERNQShuZWJZLCA0MywgMjAsIDEsIDB4MzBDQyk7CiAgICAgICAgaWYgKG5lYlkgKyA5IDwgSEVJR0hUKQogICAgICAgICAgICBkcmF3UmVjdERNQShuZWJZICsgOSwgNTEsIDE1LCAxLCAweDQ5MTApOwogICAgICAgIGlmIChuZWJZID49IDEyKQogICAgICAgICAgICBkcmF3UmVjdERNQShuZWJZIC0gMTIsIDM5LCAxMSwgMSwgMHgzMENDKTsKCiAgICAgICAgZHJhd0V4cGVkaXRpb25TZWN0b3JBcnQoKTsKICAgICAgICByZXR1cm47CiAgICB9JycnCmR5bj1keW4ucmVwbGFjZShhbmNob3IsYnJhbmNoLDEpCnM9c1s6YV0rZHluK3NbYjpdCnM9cy5yZXBsYWNlKCdNSVlPTyBFRElUSU9OIHYwLjguMCBGSVgxOCcsJ01JWU9PIEVESVRJT04gdjAuOC4wIEZJWDIwJywxKQpmb3IgdG9rZW4gaW4gKCdGSVgyMDogdGhlIGJvYXJkIG1vdmVkIGZyb20geD00MCB0byB4PTcyJywKICAgICAgICAgICAgICAnZHJhd1JlY3RETUEzMigwLCAwLCA3MiwgSEVJR0hULCBDT0xfQkxBQ0spJywKICAgICAgICAgICAgICAnZHJhd1JlY3RETUEobmViWSwgNDMsIDIwLCAxLCAweDMwQ0MpJywKICAgICAgICAgICAgICAnTUlZT08gRURJVElPTiB2MC44LjAgRklYMjAnKToKICAgIGlmIHRva2VuIG5vdCBpbiBzOiByYWlzZSBTeXN0ZW1FeGl0KCdFUlJPUjogRklYMjAgZ3VhcmQgbWlzc2luZzogJyt0b2tlbikKcC53cml0ZV90ZXh0KHMpCnByaW50KCdBcHBsaWVkIEZJWDIwOiByZWNsYWltZWQgb2xkIHBsYXlmaWVsZCBzdHJpcCBhcyBkeW5hbWljIEV4cGVkaXRpb24gc3BhY2UnKQo= | base64 -d > /tmp/fix20_patch.py
+          python3 /tmp/fix20_patch.py
+
+      - name: Verify v0.8.0 FIX20 reclaimed event zone
+        run: |
+          grep -n 'FIX20: the board moved from x=40 to x=72' game.c
+          grep -n 'drawRectDMA32(0, 0, 72, HEIGHT, COL_BLACK)' game.c
+          grep -n 'drawRectDMA(nebY, 43, 20, 1, 0x30CC)' game.c
+          grep -n '#define BOARD_X_OFFSET 72' game.h
+          grep -n 'MIYOO EDITION v0.8.0 FIX20' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX19
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX20
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX20.gba"
           if-no-files-found: error
