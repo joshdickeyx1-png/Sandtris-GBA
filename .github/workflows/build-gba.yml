@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX18 Expedition Cosmic Event Zone
+name: Build Sandtris Miyoo Edition v0.8.0 FIX19 Expedition Cosmic Event Zone Compile Fix
 
 on:
   push:
@@ -3094,21 +3094,26 @@ jobs:
           grep -n '#define BOARD_X_OFFSET 72' game.h
           grep -n 'MIYOO EDITION v0.8.0 FIX18' game.c
 
+      - name: FIX19 remove obsolete FIX14 sector cache
+        run: |
+          sed -i '/static int expeditionArtSectorDrawn = -1;/d' game.c
+          ! grep -q 'expeditionArtSectorDrawn' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX18
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX18.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX19
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX19.gba"
           if-no-files-found: error
