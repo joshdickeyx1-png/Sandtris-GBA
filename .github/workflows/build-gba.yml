@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX23 Global Shifted Playfield Cleanup
+name: Build Sandtris Miyoo Edition v0.8.0 FIX24 Normal Dynamic Background Extension
 
 on:
   push:
@@ -3185,21 +3185,81 @@ jobs:
           grep -n 'if (!expeditionMode)' game.c
           grep -n 'MIYOO EDITION v0.8.0 FIX23' game.c
 
+
+      - name: Apply v0.8.0 FIX24 Normal Mode Dynamic Background Extension
+        shell: bash
+        run: |
+          python3 - <<'PYFIX24'
+          from pathlib import Path
+          import re
+
+          p = Path("game.c")
+          s = p.read_text()
+
+          m = re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\bdrawDynamicSpaceTick\s*\([^;]*\)\s*\{', s)
+          if not m:
+              raise SystemExit("ERROR: FIX24 drawDynamicSpaceTick definition not found.")
+          brace = s.find('{', m.start())
+          lines = [
+              "",
+              "    /* FIX24: animate the reclaimed normal-mode strip all the way to the new board. */",
+              "    if (!expeditionMode) {",
+              "        static unsigned int fix24StripFrame = 0;",
+              "        fix24StripFrame++;",
+              "        if ((fix24StripFrame & 3u) == 0u) {",
+              "            int phase = (int)(fix24StripFrame >> 2);",
+              "            static const unsigned char fx[12] = {39,43,47,52,57,62,68,41,50,59,65,70};",
+              "            static const unsigned char fy[12] = {12,29,46,64,81,99,117,136,151,54,108,22};",
+              "",
+              "            drawRectDMA32(0, 38, 34, HEIGHT, COL_BLACK);",
+              "",
+              "            for (int i = 0; i < 12; i++) {",
+              "                int y = ((int)fy[i] + phase * (1 + (i & 1))) % HEIGHT;",
+              "                int x = (int)fx[i];",
+              "                u16 c = ((phase + i) & 3) ? 0x5294 : COL_WHITE;",
+              "                setPixel(y, x, c);",
+              "                if ((i % 5) == 0 && x < 71)",
+              "                    setPixel(y, x + 1, c);",
+              "            }",
+              "",
+              "            int nebY = (phase * 2) % HEIGHT;",
+              "            drawRectDMA(nebY, 40, 25, 1, 0x30CC);",
+              "            if (nebY + 11 < HEIGHT)",
+              "                drawRectDMA(nebY + 11, 48, 22, 1, 0x4910);",
+              "        }",
+              "    }",
+          ]
+          injection = "\n".join(lines) + "\n"
+          s = s[:brace+1] + injection + s[brace+1:]
+          s = s.replace('MIYOO EDITION v0.8.0 FIX23', 'MIYOO EDITION v0.8.0 FIX24', 1)
+          if 'MIYOO EDITION v0.8.0 FIX24' not in s:
+              raise SystemExit("ERROR: FIX24 version marker was not updated.")
+          p.write_text(s)
+          print("Applied FIX24: normal dynamic background now reaches x=71 beside the shifted board.")
+          PYFIX24
+
+      - name: Verify v0.8.0 FIX24 normal dynamic background extension
+        run: |
+          grep -n 'FIX24: animate the reclaimed normal-mode strip' game.c
+          grep -n 'drawRectDMA32(0, 38, 34, HEIGHT, COL_BLACK)' game.c
+          grep -n 'static const unsigned char fx\[12\]' game.c
+          grep -n 'MIYOO EDITION v0.8.0 FIX24' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX24.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX24.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX24.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX24.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX23
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX24
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX24.gba"
           if-no-files-found: error
