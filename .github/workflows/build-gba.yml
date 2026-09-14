@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX26 Unified Left Dynamic Background Compile Correction
+name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 2 Meteors
 
 on:
   push:
@@ -3268,21 +3268,199 @@ jobs:
           grep -n 'drawRectDMA(nebY26, 8, 57, 1, 0x30CC)' game.c
           grep -n 'MIYOO EDITION v0.8.0 FIX26' game.c
 
+      - name: Apply v0.8.0 Expedition Stage 2 Asteroid Belt Meteors
+        shell: bash
+        run: |
+          python3 - <<'PYEXP2'
+          from pathlib import Path
+          import re
+          
+          p = Path('game.c')
+          s = p.read_text()
+          
+          def span(src, name):
+              m = re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\b' + re.escape(name) + r'\s*\([^;]*\)\s*\{', src)
+              if not m:
+                  raise SystemExit('ERROR: ' + name + ' definition not found')
+              b = src.find('{', m.start())
+              d = 0
+              for i in range(b, len(src)):
+                  if src[i] == '{': d += 1
+                  elif src[i] == '}':
+                      d -= 1
+                      if d == 0: return m.start(), i + 1
+              raise SystemExit('ERROR: ' + name + ' closing brace not found')
+          
+          g = 'static int expeditionVisualFrame = 0;'
+          if g not in s:
+              raise SystemExit('ERROR: expedition visual-frame global missing')
+          globals_text = '''
+          static int expeditionMeteorState = 0;   /* 0 cooldown, 1 warning, 2 impact flash */
+          static int expeditionMeteorTimer = 0;
+          static int expeditionMeteorTargetX = 40;
+          static int expeditionMeteorImpactY = 110;
+          static int expeditionMeteorCount = 0;'''
+          if 'static int expeditionMeteorState = 0;' not in s:
+              s = s.replace(g, g + globals_text, 1)
+          
+          a,b = span(s, 'updateExpeditionProgress')
+          update = r'''static void expeditionMeteorStrike(void) {
+              int tx = expeditionMeteorTargetX;
+              int hitY = 118;
+              for (int y = 28; y < BOARD_HEIGHT - 3; y++) {
+                  int found = 0;
+                  for (int dx = -2; dx <= 2; dx++) {
+                      int x = tx + dx;
+                      if (x >= 1 && x <= BOARD_WIDTH && board[y][x]) {
+                          hitY = y;
+                          found = 1;
+                          break;
+                      }
+                  }
+                  if (found) break;
+              }
+              expeditionMeteorImpactY = hitY;
+          
+              for (int dy = -2; dy <= 2; dy++) {
+                  for (int dx = -3; dx <= 3; dx++) {
+                      int y = hitY + dy;
+                      int x = tx + dx;
+                      if (y < 24 || y >= BOARD_HEIGHT - 2 || x < 1 || x > BOARD_WIDTH)
+                          continue;
+                      if (!board[y][x]) continue;
+          
+                      u16 c = board[y][x];
+                      int dir = dx <= 0 ? -1 : 1;
+                      int nx = x + dir * (4 + ((dy + 2) & 1));
+                      int ny = y - 2 + ((dx + 3) & 3);
+                      if (nx < 1) nx = 1;
+                      if (nx > BOARD_WIDTH) nx = BOARD_WIDTH;
+                      if (ny < 24) ny = 24;
+                      if (ny >= BOARD_HEIGHT - 1) ny = BOARD_HEIGHT - 2;
+          
+                      if (!board[ny][nx]) {
+                          board[ny][nx] = c;
+                          board[y][x] = 0;
+                      }
+                  }
+              }
+          }
+          
+          static void updateExpeditionProgress(void) {
+              if (!expeditionMode) return;
+          
+              int target = score >= 5000 ? 1 : 0;
+              if (target != expeditionSector) {
+                  expeditionSector = target;
+                  expeditionBannerFrames = 150;
+                  expeditionMeteorState = 0;
+                  expeditionMeteorTimer = (target == 1) ? 210 : 0;
+                  expeditionMeteorCount = 0;
+              }
+              if (expeditionBannerFrames > 0) expeditionBannerFrames--;
+              expeditionVisualFrame++;
+          
+              if (expeditionSector != 1) return;
+          
+              if (expeditionMeteorTimer > 0) {
+                  expeditionMeteorTimer--;
+                  return;
+              }
+          
+              if (expeditionMeteorState == 0) {
+                  unsigned int seed = (unsigned int)expeditionVisualFrame * 17u +
+                                      (unsigned int)score * 3u +
+                                      (unsigned int)expeditionMeteorCount * 29u;
+                  expeditionMeteorTargetX = 8 + (int)(seed % (BOARD_WIDTH - 15));
+                  expeditionMeteorState = 1;
+                  expeditionMeteorTimer = 75;
+              } else if (expeditionMeteorState == 1) {
+                  expeditionMeteorStrike();
+                  expeditionMeteorState = 2;
+                  expeditionMeteorTimer = 20;
+                  expeditionMeteorCount++;
+              } else {
+                  expeditionMeteorState = 0;
+                  expeditionMeteorTimer = 300;
+              }
+          }'''
+          s = s[:a] + update + s[b:]
+          
+          a,b = span(s, 'drawExpeditionSectorArt')
+          art = s[a:b]
+          close = art.rfind('}')
+          meteor_art = r'''
+          
+              if (expeditionSector == 1 && expeditionMeteorState == 1) {
+                  int progress = 75 - expeditionMeteorTimer;
+                  int my = 10 + (progress * 118) / 75;
+                  int mx = 64 - (progress * 46) / 75;
+                  u16 mc = ((expeditionVisualFrame >> 2) & 1) ? COL_YELLOW : COL_WHITE;
+                  for (int t = 0; t < 7; t++) {
+                      int py = my - t * 2;
+                      int px = mx + t;
+                      if (py >= 0 && py < HEIGHT && px >= 1 && px < 71)
+                          setPixel(py, px, t < 2 ? COL_WHITE : mc);
+                  }
+                  if ((expeditionVisualFrame & 15) < 10)
+                      drawString(3, 4, "METEOR", COL_YELLOW);
+              } else if (expeditionSector == 1 && expeditionMeteorState == 2) {
+                  int cx = 29, cy = 116;
+                  int pulse = 3 + ((20 - expeditionMeteorTimer) >> 1);
+                  if (pulse > 12) pulse = 12;
+                  for (int d = -pulse; d <= pulse; d += 2) {
+                      if (cx + d >= 1 && cx + d < 71) setPixel(cy, cx + d, COL_YELLOW);
+                      if (cy + d >= 0 && cy + d < HEIGHT) setPixel(cy + d, cx, COL_WHITE);
+                  }
+                  drawString(3, 8, "IMPACT", COL_YELLOW);
+              }
+          '''
+          art = art[:close] + meteor_art + art[close:]
+          s = s[:a] + art + s[b:]
+          
+          s = s.replace('MIYOO EDITION v0.8.0 FIX26', 'MIYOO EDITION v0.8.0 STAGE2', 1)
+          if 'MIYOO EDITION v0.8.0 STAGE2' not in s:
+              raise SystemExit('ERROR: Stage 2 version marker not updated')
+          
+          for token in (
+              'static void expeditionMeteorStrike(void)',
+              'expeditionMeteorTimer = 75',
+              'expeditionMeteorTimer = 300',
+              'drawString(3, 4, "METEOR", COL_YELLOW)',
+              'drawString(3, 8, "IMPACT", COL_YELLOW)',
+              'MIYOO EDITION v0.8.0 STAGE2'):
+              if token not in s:
+                  raise SystemExit('ERROR: Stage 2 guard missing: ' + token)
+          
+          p.write_text(s)
+          print('Applied Expedition Stage 2: telegraphed Asteroid Belt meteor impacts + localized sand scatter')
+          PYEXP2
+
+      - name: Verify v0.8.0 Expedition Stage 2 meteors
+        run: |
+          grep -n 'static void expeditionMeteorStrike' game.c
+          grep -n 'expeditionMeteorTimer = 75' game.c
+          grep -n 'expeditionMeteorTimer = 300' game.c
+          grep -n 'METEOR' game.c
+          grep -n 'IMPACT' game.c
+          grep -n '#define BOARD_X_OFFSET 72' game.h
+          grep -n 'MIYOO EDITION v0.8.0 STAGE2' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX26.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX26.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX26.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX26.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX26
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX26.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage2-Meteors
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
           if-no-files-found: error
