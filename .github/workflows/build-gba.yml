@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1
+name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX2
 
 on:
   push:
@@ -3501,7 +3501,7 @@ jobs:
               expeditionIceAge=210;
           }
           static void expeditionThawIce(int forceAll) {
-              int thawed=0; static const u16 restored[5]={0,0x26A1,0x211A,0x173B,0x718C};
+              int thawed=0;
               for(int y=24;y<BOARD_HEIGHT && thawed<(forceAll?96:18);y++) for(int x=1;x<=BOARD_WIDTH && thawed<(forceAll?96:18);x++) {
                   if(!isExpeditionIce(board[y][x])) continue;
                   int c=mudOriginal[y][x]&COL_MASK; if(c<1||c>4)c=1;
@@ -3544,8 +3544,8 @@ jobs:
           '''
           block=block[:brace]+moon+block[brace:]; s=s[:a]+block+s[b:]
           s=s.replace('drawCenteredShadowString(66, 72, 82, 8, "SECTOR 2", COL_WHITE);','drawCenteredShadowString(66, 72, 82, 8, expeditionSector == 2 ? "SECTOR 3" : "SECTOR 2", COL_WHITE);')
-          s=s.replace('MIYOO EDITION v0.8.0 STAGE2','MIYOO EDITION v0.8.0 STAGE3',1)
-          for token in ('FROZEN MOON','score >= 10000 ? 2','EXPEDITION_ICE_COLOR','updateFrozenMoonCold();','expeditionFreezePatch','expeditionThawIce','"COLD"','MIYOO EDITION v0.8.0 STAGE3'):
+          s=s.replace('MIYOO EDITION v0.8.0 STAGE2','MIYOO EDITION v0.8.0 STAGE3 FIX2',1)
+          for token in ('FROZEN MOON','score >= 10000 ? 2','EXPEDITION_ICE_COLOR','updateFrozenMoonCold();','expeditionFreezePatch','expeditionThawIce','"COLD"','MIYOO EDITION v0.8.0 STAGE3 FIX2'):
               if token not in s: raise SystemExit('ERROR: Stage 3 guard missing: '+token)
           p.write_text(s); print('Applied Expedition Stage 3: Frozen Moon + Cold/Ice climate system')
           PYEXP3
@@ -3558,7 +3558,7 @@ jobs:
           grep -n 'updateFrozenMoonCold' game.c
           grep -n 'expeditionFreezePatch' game.c
           grep -n 'expeditionThawIce' game.c
-          grep -n 'MIYOO EDITION v0.8.0 STAGE3' game.c
+          grep -n 'MIYOO EDITION v0.8.0 STAGE3 FIX2' game.c
           grep -n '#define BOARD_X_OFFSET 72' game.h
 
       - name: Build ROM
@@ -3567,15 +3567,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX2.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX2.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX2.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX2.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage3-Frozen-Moon-FIX1
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage3-Frozen-Moon-FIX2
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX2.gba"
           if-no-files-found: error
