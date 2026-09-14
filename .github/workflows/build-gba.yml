@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon
+name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1
 
 on:
   push:
@@ -3486,7 +3486,9 @@ jobs:
               s=s.replace('if (isMud(board[yy][xx]))\n            continue;','if (isMud(board[yy][xx]) || isExpeditionIce(board[yy][xx]))\n            continue;',1)
 
           a,b=span(s,'updateExpeditionProgress')
-          helpers=r'''static void expeditionFreezePatch(void) {
+          helpers=r'''static void wakeChunksAround(int x, int y);
+
+          static void expeditionFreezePatch(void) {
               int frozen=0;
               int start=6+((expeditionVisualFrame*7+score)%(BOARD_WIDTH-18));
               for(int y=34;y<BOARD_HEIGHT-2 && frozen<42;y++) for(int x=start;x<start+14 && x<=BOARD_WIDTH && frozen<42;x++) {
@@ -3565,15 +3567,15 @@ jobs:
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage3-Frozen-Moon
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage3-Frozen-Moon-FIX1
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon FIX1.gba"
           if-no-files-found: error
