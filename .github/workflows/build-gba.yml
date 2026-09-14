@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 FIX21 Expedition Aligned Announcement Earth Stable
+name: Build Sandtris Miyoo Edition v0.8.0 FIX23 Global Shifted Playfield Cleanup
 
 on:
   push:
@@ -3144,21 +3144,62 @@ jobs:
           grep -n 'nebY >= 93 && nebY <= 139' game.c
           grep -n 'MIYOO EDITION v0.8.0 FIX22' game.c
 
+
+      - name: Apply v0.8.0 FIX23 Global Old Playfield Cleanup
+        shell: bash
+        run: |
+          python3 - <<'PYFIX23'
+          from pathlib import Path
+          import re
+
+          p = Path("game.c")
+          s = p.read_text()
+
+          # The original background asset still contains the old board beginning at x=40.
+          # The live board now begins at x=72. Every time the gameplay background is restored
+          # outside Expedition, erase only the abandoned x=40..71 strip before the live board
+          # is drawn. This fixes START GAME and all later screen restores without touching the
+          # approved new board position or Expedition's dedicated dynamic event-zone compositor.
+          pattern = r'(?m)^(\s*)drawFullScreenImageDMA\(bg\);\s*$'
+          replacement = (
+              r'\1drawFullScreenImageDMA(bg);\n'
+              r'\1if (!expeditionMode)\n'
+              r'\1    drawRectDMA32(0, 40, 32, HEIGHT, COL_BLACK);'
+          )
+          s, count = re.subn(pattern, replacement, s)
+          if count < 1:
+              raise SystemExit("ERROR: FIX23 could not find any gameplay background restore calls.")
+
+          s = s.replace('MIYOO EDITION v0.8.0 FIX22', 'MIYOO EDITION v0.8.0 FIX23', 1)
+          if 'MIYOO EDITION v0.8.0 FIX23' not in s:
+              raise SystemExit("ERROR: FIX23 version marker was not updated.")
+
+          p.write_text(s)
+          print(f"Applied FIX23 global old-playfield cleanup to {count} background restore call(s).")
+          PYFIX23
+
+      - name: Verify v0.8.0 FIX23 global shifted playfield cleanup
+        run: |
+          grep -n '#define BOARD_X_OFFSET 72' game.h
+          grep -n 'drawRectDMA32(0, 40, 32, HEIGHT, COL_BLACK)' game.c
+          grep -n 'if (!expeditionMode)' game.c
+          grep -n 'MIYOO EDITION v0.8.0 FIX23' game.c
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX22.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX22.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX22.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX22.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX22
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX22.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage1-FIX23
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 1 FIX23.gba"
           if-no-files-found: error
