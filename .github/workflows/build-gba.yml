@@ -1,4 +1,4 @@
-name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 2 Meteors
+name: Build Sandtris Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon
 
 on:
   push:
@@ -3446,21 +3446,134 @@ jobs:
           grep -n '#define BOARD_X_OFFSET 72' game.h
           grep -n 'MIYOO EDITION v0.8.0 STAGE2' game.c
 
+      - name: Apply v0.8.0 Expedition Stage 3 Frozen Moon
+        shell: bash
+        run: |
+          python3 - <<'PYEXP3'
+          from pathlib import Path
+          import re
+          p=Path('game.c'); s=p.read_text()
+          def span(src,name):
+              m=re.search(r'(?m)^(?:static\s+)?(?:inline\s+)?[A-Za-z_][\w\s\*]*\b'+re.escape(name)+r'\s*\([^;]*\)\s*\{',src)
+              if not m: raise SystemExit('ERROR: '+name+' definition not found')
+              b=src.find('{',m.start()); d=0
+              for i in range(b,len(src)):
+                  if src[i]=='{': d+=1
+                  elif src[i]=='}':
+                      d-=1
+                      if d==0: return m.start(),i+1
+              raise SystemExit('ERROR: '+name+' closing brace not found')
+
+          if 'if (expeditionSector == 2) return "FROZEN MOON";' not in s:
+              s=s.replace('if (expeditionSector == 1) return "ASTEROID BELT";','if (expeditionSector == 2) return "FROZEN MOON";\n    if (expeditionSector == 1) return "ASTEROID BELT";',1)
+          old='int target = score >= 5000 ? 1 : 0;'
+          if old not in s: raise SystemExit('ERROR: Stage 2 expedition target line not found')
+          s=s.replace(old,'int target = score >= 10000 ? 2 : (score >= 5000 ? 1 : 0);',1)
+
+          g='static int expeditionMeteorCount = 0;'
+          if g not in s: raise SystemExit('ERROR: Stage 2 meteor globals missing')
+          if 'EXPEDITION_ICE_COLOR' not in s:
+              s=s.replace(g,g+'''\nstatic int expeditionColdTimer = 240;\nstatic int expeditionColdWarning = 0;\nstatic int expeditionIceAge = 0;\n#define EXPEDITION_ICE_COLOR 0x7FDE''',1)
+
+          if 'static int isExpeditionIce(u16 value)' not in s:
+              marker='static int isNormalSand(u16 value) {'; pos=s.find(marker)
+              if pos<0: raise SystemExit('ERROR: isNormalSand not found')
+              s=s[:pos]+'static int isExpeditionIce(u16 value) { return value == EXPEDITION_ICE_COLOR; }\n\n'+s[pos:]
+              a,b=span(s,'isNormalSand'); block=s[a:b]
+              block=block.replace('return value && value != 0xFFFF && !isMud(value);','return value && value != 0xFFFF && !isMud(value) && !isExpeditionIce(value);')
+              s=s[:a]+block+s[b:]
+          if 'isMud(board[yy][xx]) || isExpeditionIce(board[yy][xx])' not in s:
+              s=s.replace('if (isMud(board[yy][xx]))\n            continue;','if (isMud(board[yy][xx]) || isExpeditionIce(board[yy][xx]))\n            continue;',1)
+
+          a,b=span(s,'updateExpeditionProgress')
+          helpers=r'''static void expeditionFreezePatch(void) {
+              int frozen=0;
+              int start=6+((expeditionVisualFrame*7+score)%(BOARD_WIDTH-18));
+              for(int y=34;y<BOARD_HEIGHT-2 && frozen<42;y++) for(int x=start;x<start+14 && x<=BOARD_WIDTH && frozen<42;x++) {
+                  if(!isNormalSand(board[y][x])) continue;
+                  int exposed=(y<=1 || !board[y-1][x]);
+                  if(!exposed && ((x+y+expeditionVisualFrame)&3)) continue;
+                  mudOriginal[y][x]=(u8)(board[y][x]&COL_MASK);
+                  board[y][x]=EXPEDITION_ICE_COLOR; wakeChunksAround(x,y); frozen++;
+              }
+              expeditionIceAge=210;
+          }
+          static void expeditionThawIce(int forceAll) {
+              int thawed=0; static const u16 restored[5]={0,0x26A1,0x211A,0x173B,0x718C};
+              for(int y=24;y<BOARD_HEIGHT && thawed<(forceAll?96:18);y++) for(int x=1;x<=BOARD_WIDTH && thawed<(forceAll?96:18);x++) {
+                  if(!isExpeditionIce(board[y][x])) continue;
+                  int c=mudOriginal[y][x]&COL_MASK; if(c<1||c>4)c=1;
+                  board[y][x]=MUD_COLOR|STP_MASK; mudOriginal[y][x]=(u8)c; wakeChunksAround(x,y); thawed++;
+              }
+          }
+          static void updateFrozenMoonCold(void) {
+              if(!expeditionMode || expeditionSector!=2){ expeditionColdTimer=240; expeditionColdWarning=0; expeditionIceAge=0; return; }
+              if(expeditionIceAge>0){ expeditionIceAge--; if(expeditionIceAge==0) expeditionThawIce(1); }
+              if(expeditionColdTimer>0){ expeditionColdTimer--; if(expeditionColdTimer<=75) expeditionColdWarning=1; return; }
+              expeditionColdWarning=0; expeditionFreezePatch(); expeditionColdTimer=330;
+          }
+
+          '''
+          s=s[:a]+helpers+s[a:]
+          a,b=span(s,'updateExpeditionProgress'); block=s[a:b]
+          if 'expeditionVisualFrame++;' not in block: raise SystemExit('ERROR: expedition visual tick missing')
+          block=block.replace('expeditionVisualFrame++;','expeditionVisualFrame++;\n    updateFrozenMoonCold();',1); s=s[:a]+block+s[b:]
+
+          a,b=span(s,'activateElementPiece'); block=s[a:b]
+          water='''if (pieceCurrElement == ELEMENT_WATER &&\n                        nx >= 1 && nx <= BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT &&\n                        isNormalSand(board[ny][nx])) {\n                        spreadMudFrom(nx, ny);\n                        return;\n                    }'''
+          frozen='''if (pieceCurrElement == ELEMENT_WATER &&\n                        nx >= 1 && nx <= BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT &&\n                        isNormalSand(board[ny][nx])) {\n                        if (expeditionMode && expeditionSector == 2) {\n                            mudOriginal[ny][nx] = (u8)(board[ny][nx] & COL_MASK);\n                            board[ny][nx] = EXPEDITION_ICE_COLOR;\n                            wakeChunksAround(nx, ny); expeditionIceAge = 210;\n                        } else spreadMudFrom(nx, ny);\n                        return;\n                    }'''
+          if water not in block: raise SystemExit('ERROR: Water activation branch not found')
+          block=block.replace(water,frozen,1)
+          heat='''if (pieceCurrElement == ELEMENT_HEAT &&\n                        nx >= 1 && nx <= BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT &&\n                        isMud(board[ny][nx])) {'''
+          heatnew='''if (pieceCurrElement == ELEMENT_HEAT &&\n                        nx >= 1 && nx <= BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT &&\n                        isExpeditionIce(board[ny][nx])) { expeditionThawIce(1); return; }\n                    if (pieceCurrElement == ELEMENT_HEAT &&\n                        nx >= 1 && nx <= BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT &&\n                        isMud(board[ny][nx])) {'''
+          if heat not in block: raise SystemExit('ERROR: Heat activation branch not found')
+          block=block.replace(heat,heatnew,1); s=s[:a]+block+s[b:]
+
+          a,b=span(s,'drawExpeditionSectorArt'); block=s[a:b]; brace=block.find('{')+1
+          moon=r'''
+              if (expeditionSector == 2) {
+                  const int cx=32,cy=111,r=23;
+                  for(int y=-r;y<=r;y++) for(int x=-r;x<=r;x++){ int d=x*x+y*y; if(d<=r*r){ u16 c=(d>(r-2)*(r-2))?0x7FDE:(((x+y)&5)?0x6318:0x5294); setPixel(cy+y,cx+x,c); } }
+                  drawRectDMA(101,20,5,8,0x4210); drawRectDMA(117,38,7,5,0x4210); drawRectDMA(126,23,5,4,0x739C);
+                  for(int i=0;i<6;i++){ int fx=7+i*10,fy=26+((i*19+expeditionVisualFrame/8)%48); if(fx<70)setPixel(fy,fx,COL_WHITE); }
+                  if(expeditionColdWarning && ((expeditionVisualFrame>>3)&1)) drawString(3,4,"COLD",COL_WHITE);
+                  return;
+              }
+          '''
+          block=block[:brace]+moon+block[brace:]; s=s[:a]+block+s[b:]
+          s=s.replace('drawCenteredShadowString(66, 72, 82, 8, "SECTOR 2", COL_WHITE);','drawCenteredShadowString(66, 72, 82, 8, expeditionSector == 2 ? "SECTOR 3" : "SECTOR 2", COL_WHITE);')
+          s=s.replace('MIYOO EDITION v0.8.0 STAGE2','MIYOO EDITION v0.8.0 STAGE3',1)
+          for token in ('FROZEN MOON','score >= 10000 ? 2','EXPEDITION_ICE_COLOR','updateFrozenMoonCold();','expeditionFreezePatch','expeditionThawIce','"COLD"','MIYOO EDITION v0.8.0 STAGE3'):
+              if token not in s: raise SystemExit('ERROR: Stage 3 guard missing: '+token)
+          p.write_text(s); print('Applied Expedition Stage 3: Frozen Moon + Cold/Ice climate system')
+          PYEXP3
+
+      - name: Verify v0.8.0 Expedition Stage 3 Frozen Moon
+        run: |
+          grep -n 'FROZEN MOON' game.c
+          grep -n 'score >= 10000 ? 2' game.c
+          grep -n 'EXPEDITION_ICE_COLOR' game.c
+          grep -n 'updateFrozenMoonCold' game.c
+          grep -n 'expeditionFreezePatch' game.c
+          grep -n 'expeditionThawIce' game.c
+          grep -n 'MIYOO EDITION v0.8.0 STAGE3' game.c
+          grep -n '#define BOARD_X_OFFSET 72' game.h
+
       - name: Build ROM
         run: make
 
       - name: Rename ROM
         run: |
           test -f Sandtris.gba
-          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
-          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
-          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
-          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba")
+          cp Sandtris.gba "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
+          ls -lh "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
+          sha256sum "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
+          size=$(stat -c%s "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba")
           test "$size" -le 33554432 || { echo "ERROR: ROM exceeds 32 MiB GBA limit"; exit 1; }
 
       - name: Upload Miyoo Edition ROM
         uses: actions/upload-artifact@v6
         with:
-          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage2-Meteors
-          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 2 Meteors.gba"
+          name: Sandtris-Miyoo-v0.8.0-Expedition-Stage3-Frozen-Moon
+          path: "Sandtris - Miyoo Edition v0.8.0 Expedition Stage 3 Frozen Moon.gba"
           if-no-files-found: error
